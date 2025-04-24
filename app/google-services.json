@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "436622916248",
+    "project_id": "budgettrackerapp-5cabb",
+    "storage_bucket": "budgettrackerapp-5cabb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:436622916248:android:8043ec8ed57943f496eeed",
+        "android_client_info": {
+          "package_name": "vcmsa.projects.prog3c"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1shelwg6QyvNQYF1XcMtpn0D2gc29wTY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
