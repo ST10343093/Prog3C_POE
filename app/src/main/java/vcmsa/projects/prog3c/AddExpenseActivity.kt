@@ -46,6 +46,7 @@ class AddExpenseActivity : AppCompatActivity() {
     private lateinit var btnTakePhoto: Button
     private lateinit var ivReceiptPhoto: ImageView
     private lateinit var btnSaveExpense: Button
+    private lateinit var btnBackFromExpense: Button
 
     private var selectedDate: Date = Date()
     private var selectedCategoryId: Long = -1
@@ -72,6 +73,7 @@ class AddExpenseActivity : AppCompatActivity() {
         btnTakePhoto = findViewById(R.id.btnTakePhoto)
         ivReceiptPhoto = findViewById(R.id.ivReceiptPhoto)
         btnSaveExpense = findViewById(R.id.btnSaveExpense)
+        btnBackFromExpense = findViewById(R.id.btnBackFromExpense)
 
         // Set up date picker
         setupDatePicker()
@@ -85,6 +87,11 @@ class AddExpenseActivity : AppCompatActivity() {
         // Set up take photo button
         btnTakePhoto.setOnClickListener {
             checkCameraPermission()
+        }
+
+        // Set up back button
+        btnBackFromExpense.setOnClickListener {
+            finish() // This will close the current activity and return to the previous one
         }
 
         // Set up save button
