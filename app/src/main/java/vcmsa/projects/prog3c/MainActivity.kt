@@ -46,6 +46,13 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        // Add navigation to View Expenses screen
+        val viewExpensesButton = findViewById<Button>(R.id.btnViewExpenses)
+        viewExpensesButton.setOnClickListener {
+            val intent = Intent(this, ViewExpensesActivity::class.java)
+            startActivity(intent)
+        }
+
         // Set up logout button
         val logoutButton = findViewById<Button>(R.id.btnLogout)
         logoutButton.setOnClickListener {

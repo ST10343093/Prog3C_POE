@@ -44,6 +44,7 @@ class AddExpenseActivity : AppCompatActivity() {
     private lateinit var etDate: TextInputEditText
     private lateinit var spinnerCategory: Spinner
     private lateinit var btnTakePhoto: Button
+    private lateinit var btnChoosePhoto: Button
     private lateinit var ivReceiptPhoto: ImageView
     private lateinit var btnSaveExpense: Button
     private lateinit var btnBackFromExpense: Button
@@ -55,6 +56,7 @@ class AddExpenseActivity : AppCompatActivity() {
 
     companion object {
         private const val REQUEST_IMAGE_CAPTURE = 1
+        private const val REQUEST_GALLERY_IMAGE = 2
         private const val REQUEST_CAMERA_PERMISSION = 100
     }
 
@@ -71,6 +73,7 @@ class AddExpenseActivity : AppCompatActivity() {
         etDate = findViewById(R.id.etExpenseDate)
         spinnerCategory = findViewById(R.id.spinnerCategory)
         btnTakePhoto = findViewById(R.id.btnTakePhoto)
+        btnChoosePhoto = findViewById(R.id.btnChoosePhoto)
         ivReceiptPhoto = findViewById(R.id.ivReceiptPhoto)
         btnSaveExpense = findViewById(R.id.btnSaveExpense)
         btnBackFromExpense = findViewById(R.id.btnBackFromExpense)
@@ -87,6 +90,11 @@ class AddExpenseActivity : AppCompatActivity() {
         // Set up take photo button
         btnTakePhoto.setOnClickListener {
             checkCameraPermission()
+        }
+
+        // Set up choose photo from gallery button
+        btnChoosePhoto.setOnClickListener {
+            openGallery()
         }
 
         // Set up back button
@@ -171,6 +179,11 @@ class AddExpenseActivity : AppCompatActivity() {
         }
     }
 
+    private fun openGallery() {
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        startActivityForResult(intent, REQUEST_GALLERY_IMAGE)
+    }
+
     private fun checkCameraPermission() {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -248,13 +261,38 @@ class AddExpenseActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
-            // Show the image
-            ivReceiptPhoto.visibility = View.VISIBLE
+        if (resultCode == Activity.RESULT_OK) {
+            when (requestCode) {
+                REQUEST_IMAGE_CAPTURE -> {
+                    // Show the image
+                    ivReceiptPhoto.visibility = View.VISIBLE
 
-            // Load the taken picture and show it
-            val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, Uri.fromFile(File(currentPhotoPath!!)))
-            ivReceiptPhoto.setImageBitmap(bitmap)
+                    // Load the taken picture and show it
+                    val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, Uri.fromFile(File(currentPhotoPath!!)))
+                    ivReceiptPhoto.setImageBitmap(bitmap)
+                }
+                REQUEST_GALLERY_IMAGE -> {
+                    // Handle gallery image selection
+                    data?.data?.let { uri ->
+                        try {
+                            // Save the path
+                            val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
+                            contentResolver.query(uri, filePathColumn, null, null, null)?.use { cursor ->
+                                if (cursor.moveToFirst()) {
+                                    val columnIndex = cursor.getColumnIndexOrThrow(filePathColumn[0])
+                                    currentPhotoPath = cursor.getString(columnIndex)
+
+                                    // Show the image
+                                    ivReceiptPhoto.visibility = View.VISIBLE
+                                    ivReceiptPhoto.setImageURI(uri)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(this, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
         }
     }
 

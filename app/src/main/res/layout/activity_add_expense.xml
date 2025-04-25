@@ -97,15 +97,31 @@
             app:layout_constraintStart_toEndOf="@+id/tvCategoryLabel"
             app:layout_constraintTop_toBottomOf="@+id/tilExpenseDate" />
 
-        <Button
-            android:id="@+id/btnTakePhoto"
+        <LinearLayout
+            android:id="@+id/llPhotoButtons"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Take Photo"
+            android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/spinnerCategory" />
+            app:layout_constraintTop_toBottomOf="@+id/spinnerCategory">
+
+            <Button
+                android:id="@+id/btnTakePhoto"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="Take Photo" />
+
+            <Button
+                android:id="@+id/btnChoosePhoto"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Choose From Gallery" />
+        </LinearLayout>
 
         <ImageView
             android:id="@+id/ivReceiptPhoto"
@@ -117,9 +133,10 @@
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/btnTakePhoto" />
+            app:layout_constraintTop_toBottomOf="@+id/llPhotoButtons" />
 
         <LinearLayout
+            android:id="@+id/llActionButtons"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
@@ -142,7 +159,6 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Save Expense" />
-
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
