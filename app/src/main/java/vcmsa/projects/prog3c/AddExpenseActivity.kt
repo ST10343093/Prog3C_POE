@@ -9,12 +9,14 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -53,11 +55,16 @@ class AddExpenseActivity : AppCompatActivity() {
     private var selectedCategoryId: Long = -1
     private var categories: List<Category> = emptyList()
     private var currentPhotoPath: String? = null
+    private var photoUri: Uri? = null
+
+    private var isEditMode = false
+    private var currentExpenseId: Long = -1
 
     companion object {
         private const val REQUEST_IMAGE_CAPTURE = 1
         private const val REQUEST_GALLERY_IMAGE = 2
         private const val REQUEST_CAMERA_PERMISSION = 100
+        private const val TAG = "AddExpenseActivity"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,6 +84,22 @@ class AddExpenseActivity : AppCompatActivity() {
         ivReceiptPhoto = findViewById(R.id.ivReceiptPhoto)
         btnSaveExpense = findViewById(R.id.btnSaveExpense)
         btnBackFromExpense = findViewById(R.id.btnBackFromExpense)
+
+        // Check if we're in edit mode
+        isEditMode = intent.getBooleanExtra("IS_EDIT", false)
+        if (isEditMode) {
+            currentExpenseId = intent.getLongExtra("EXPENSE_ID", -1)
+            if (currentExpenseId != -1L) {
+                // Change title and button text
+                findViewById<TextView>(R.id.tvAddExpenseTitle).text = "Edit Expense"
+                btnSaveExpense.text = "Update Expense"
+
+                // Load expense data
+                loadExpenseForEdit(currentExpenseId)
+            } else {
+                isEditMode = false
+            }
+        }
 
         // Set up date picker
         setupDatePicker()
@@ -176,11 +199,78 @@ class AddExpenseActivity : AppCompatActivity() {
                     // Do nothing
                 }
             }
+
+            // If in edit mode and we have the category data now, reselect the appropriate category
+            if (isEditMode && currentExpenseId != -1L) {
+                val expense = withContext(Dispatchers.IO) {
+                    database.expenseDao().getExpenseById(currentExpenseId)
+                }
+                if (expense != null) {
+                    val categoryPosition = categories.indexOfFirst { it.id == expense.categoryId }
+                    if (categoryPosition >= 0) {
+                        spinnerCategory.setSelection(categoryPosition)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun loadExpenseForEdit(expenseId: Long) {
+        lifecycleScope.launch {
+            val expense = withContext(Dispatchers.IO) {
+                database.expenseDao().getExpenseById(expenseId)
+            }
+
+            if (expense == null) {
+                Toast.makeText(this@AddExpenseActivity, "Expense not found", Toast.LENGTH_SHORT).show()
+                finish()
+                return@launch
+            }
+
+            // Fill the form with expense data
+            etAmount.setText(expense.amount.toString())
+            etDescription.setText(expense.description)
+            selectedDate = expense.date
+            updateDateText()
+            currentPhotoPath = expense.photoPath
+
+            // Show photo if it exists
+            if (!expense.photoPath.isNullOrEmpty()) {
+                try {
+                    Log.d(TAG, "Loading photo from path: ${expense.photoPath}")
+                    ivReceiptPhoto.visibility = View.VISIBLE
+
+                    if (expense.photoPath!!.startsWith("content://")) {
+                        // It's a content URI
+                        photoUri = Uri.parse(expense.photoPath)
+                        ivReceiptPhoto.setImageURI(photoUri)
+                        Log.d(TAG, "Loaded image from content URI")
+                    } else {
+                        // It's a file path
+                        val photoFile = File(expense.photoPath!!)
+                        if (photoFile.exists()) {
+                            Log.d(TAG, "Photo file exists, loading bitmap")
+                            val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, Uri.fromFile(photoFile))
+                            ivReceiptPhoto.setImageBitmap(bitmap)
+                        } else {
+                            Log.e(TAG, "Photo file does not exist: ${expense.photoPath}")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error loading image", e)
+                    Toast.makeText(this@AddExpenseActivity, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            // Category will be selected when the categories are loaded in loadCategories()
         }
     }
 
     private fun openGallery() {
-        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+        intent.addCategory(Intent.CATEGORY_OPENABLE)
+        intent.type = "image/*"
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
         startActivityForResult(intent, REQUEST_GALLERY_IMAGE)
     }
 
@@ -227,6 +317,7 @@ class AddExpenseActivity : AppCompatActivity() {
                     createImageFile()
                 } catch (ex: IOException) {
                     // Error occurred while creating the File
+                    Log.e(TAG, "Error creating image file", ex)
                     Toast.makeText(this, "Error creating image file", Toast.LENGTH_SHORT).show()
                     null
                 }
@@ -237,6 +328,7 @@ class AddExpenseActivity : AppCompatActivity() {
                         "vcmsa.projects.prog3c.fileprovider",
                         it
                     )
+                    photoUri = photoURI
                     takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
                     startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
                 }
@@ -256,6 +348,7 @@ class AddExpenseActivity : AppCompatActivity() {
         ).apply {
             // Save a file: path for use with ACTION_VIEW intents
             currentPhotoPath = absolutePath
+            Log.d(TAG, "Created image file: $currentPhotoPath")
         }
     }
 
@@ -268,26 +361,49 @@ class AddExpenseActivity : AppCompatActivity() {
                     ivReceiptPhoto.visibility = View.VISIBLE
 
                     // Load the taken picture and show it
-                    val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, Uri.fromFile(File(currentPhotoPath!!)))
-                    ivReceiptPhoto.setImageBitmap(bitmap)
+                    try {
+                        if (currentPhotoPath != null) {
+                            Log.d(TAG, "Loading camera image from: $currentPhotoPath")
+                            val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, Uri.fromFile(File(currentPhotoPath!!)))
+                            ivReceiptPhoto.setImageBitmap(bitmap)
+                        } else if (photoUri != null) {
+                            Log.d(TAG, "Loading camera image from URI: $photoUri")
+                            ivReceiptPhoto.setImageURI(photoUri)
+                            currentPhotoPath = photoUri.toString()
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error loading camera image", e)
+                        Toast.makeText(this, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
                 REQUEST_GALLERY_IMAGE -> {
                     // Handle gallery image selection
                     data?.data?.let { uri ->
                         try {
-                            // Save the path
-                            val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
-                            contentResolver.query(uri, filePathColumn, null, null, null)?.use { cursor ->
-                                if (cursor.moveToFirst()) {
-                                    val columnIndex = cursor.getColumnIndexOrThrow(filePathColumn[0])
-                                    currentPhotoPath = cursor.getString(columnIndex)
+                            Log.d(TAG, "Selected gallery image: $uri")
+                            photoUri = uri
 
-                                    // Show the image
-                                    ivReceiptPhoto.visibility = View.VISIBLE
-                                    ivReceiptPhoto.setImageURI(uri)
-                                }
+                            // Take persistent URI permission
+                            try {
+                                contentResolver.takePersistableUriPermission(
+                                    uri,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                )
+                                Log.d(TAG, "Took persistent permission for URI")
+                            } catch (e: SecurityException) {
+                                Log.e(TAG, "Failed to take permission: ${e.message}")
+                                // Continue anyway, might still work
                             }
+
+                            // For gallery images, store the content URI directly
+                            currentPhotoPath = uri.toString()
+                            Log.d(TAG, "Setting currentPhotoPath to URI: $currentPhotoPath")
+
+                            // Show the image
+                            ivReceiptPhoto.visibility = View.VISIBLE
+                            ivReceiptPhoto.setImageURI(uri)
                         } catch (e: Exception) {
+                            Log.e(TAG, "Error processing gallery image", e)
                             Toast.makeText(this, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -332,22 +448,41 @@ class AddExpenseActivity : AppCompatActivity() {
             return
         }
 
+        // Log photo path before saving
+        Log.d(TAG, "Saving expense with photo path: $currentPhotoPath")
+
         // Create expense object
-        val expense = Expense(
-            amount = amount,
-            description = description,
-            date = selectedDate,
-            categoryId = selectedCategoryId,
-            photoPath = currentPhotoPath
-        )
+        val expense = if (isEditMode) {
+            Expense(
+                id = currentExpenseId,
+                amount = amount,
+                description = description,
+                date = selectedDate,
+                categoryId = selectedCategoryId,
+                photoPath = currentPhotoPath
+            )
+        } else {
+            Expense(
+                amount = amount,
+                description = description,
+                date = selectedDate,
+                categoryId = selectedCategoryId,
+                photoPath = currentPhotoPath
+            )
+        }
 
         // Save expense to database
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                database.expenseDao().insertExpense(expense)
+                if (isEditMode) {
+                    database.expenseDao().updateExpense(expense)
+                } else {
+                    database.expenseDao().insertExpense(expense)
+                }
             }
 
-            Toast.makeText(this@AddExpenseActivity, "Expense saved", Toast.LENGTH_SHORT).show()
+            val message = if (isEditMode) "Expense updated" else "Expense saved"
+            Toast.makeText(this@AddExpenseActivity, message, Toast.LENGTH_SHORT).show()
             finish()
         }
     }

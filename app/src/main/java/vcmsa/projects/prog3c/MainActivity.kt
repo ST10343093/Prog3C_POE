@@ -53,6 +53,13 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        // Add navigation to Budget screen
+        val setBudgetButton = findViewById<Button>(R.id.btnSetBudget)
+        setBudgetButton.setOnClickListener {
+            val intent = Intent(this, BudgetActivity::class.java)
+            startActivity(intent)
+        }
+
         // Set up logout button
         val logoutButton = findViewById<Button>(R.id.btnLogout)
         logoutButton.setOnClickListener {
