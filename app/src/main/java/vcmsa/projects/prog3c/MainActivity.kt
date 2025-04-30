@@ -49,15 +49,13 @@ class MainActivity : AppCompatActivity() {
         // Add navigation to View Expenses screen
         val viewExpensesButton = findViewById<Button>(R.id.btnViewExpenses)
         viewExpensesButton.setOnClickListener {
-            val intent = Intent(this, ViewExpensesActivity::class.java)
-            startActivity(intent)
+
         }
 
         // Add navigation to Budget screen
         val setBudgetButton = findViewById<Button>(R.id.btnSetBudget)
         setBudgetButton.setOnClickListener {
-            val intent = Intent(this, BudgetActivity::class.java)
-            startActivity(intent)
+
         }
 
         // Set up logout button
