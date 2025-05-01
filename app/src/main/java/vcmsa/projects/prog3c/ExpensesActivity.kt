@@ -1,8 +1,7 @@
 package vcmsa.projects.prog3c
 
 import android.app.DatePickerDialog
-import android.graphics.Color
-import android.net.Uri
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -10,149 +9,164 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import vcmsa.projects.prog3c.data.AppDatabase
+import vcmsa.projects.prog3c.data.Category
 import vcmsa.projects.prog3c.data.Expense
-import java.io.File
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class ExpensesActivity : AppCompatActivity() {
 
     private lateinit var database: AppDatabase
-    private var startDate: Date? = Date()
-    private var endDate: Date? = Date()
-    private lateinit var btnBackFromExpenses: Button
-    private lateinit var btnClearFilter: Button
-    private lateinit var btnApplyFilter: Button
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var adapter: ExpenseAdapter
     private lateinit var etStartDate: TextInputEditText
     private lateinit var etEndDate: TextInputEditText
-    private var expenseList: List<Expense> = emptyList()
+    private lateinit var btnApplyFilter: Button
+    private lateinit var tvTotalExpenses: TextView
+    private lateinit var rvExpenses: RecyclerView
+    private lateinit var btnBack: Button
+    private lateinit var adapter: ExpenseAdapter
+
+    private var startDate: Date = Calendar.getInstance().apply {
+        add(Calendar.MONTH, -1) // Default to 1 month ago
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+    }.time
+
+    private var endDate: Date = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 23)
+        set(Calendar.MINUTE, 59)
+        set(Calendar.SECOND, 59)
+    }.time
+
+    private val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    private var categoryMap: Map<Long, Category> = emptyMap()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_expenses)
+        setContentView(R.layout.activity_view_expenses)
 
+        // Initialize database
         database = AppDatabase.getDatabase(this)
 
+        // Initialize views
         etStartDate = findViewById(R.id.etStartDate)
         etEndDate = findViewById(R.id.etEndDate)
+        btnApplyFilter = findViewById(R.id.btnApplyFilter)
+        tvTotalExpenses = findViewById(R.id.tvTotalExpenses)
+        rvExpenses = findViewById(R.id.rvExpenses)
+        btnBack = findViewById(R.id.btnBack)
 
-        btnBackFromExpenses = findViewById(R.id.btnBack)
-        btnClearFilter = findViewById(R.id.buttonClear)
-        btnApplyFilter = findViewById(R.id.buttonApplyFilter)
+        // Set up date fields
+        updateDateFields()
 
-        recyclerView = findViewById(R.id.rvExpenses)
-        adapter = ExpenseAdapter()
-        recyclerView.adapter = adapter
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        // Set up date pickers
+        etStartDate.setOnClickListener { showDatePicker(true) }
+        etEndDate.setOnClickListener { showDatePicker(false) }
 
-        setupDatePicker()
-        updateDateText()
-
-        loadExpenses()
-
-        btnClearFilter.setOnClickListener {
+        // Set up filter button
+        btnApplyFilter.setOnClickListener {
             loadExpenses()
         }
-        btnApplyFilter.setOnClickListener {
-            filterExpenses()
-        }
-        btnBackFromExpenses.setOnClickListener {
+
+        // Set up back button
+        btnBack.setOnClickListener {
             finish()
         }
+
+        // Set up RecyclerView with our custom adapter
+        adapter = ExpenseAdapter(emptyList(), emptyMap(), ::onExpenseClick)
+        rvExpenses.adapter = adapter
+        rvExpenses.layoutManager = LinearLayoutManager(this)
+
+        // Load categories and expenses
+        loadCategories()
     }
 
-    private fun setupDatePicker() {
-        etStartDate.setOnClickListener {
-            val calendar = Calendar.getInstance()
-            calendar.time = startDate ?: Date()
-            val datePickerDialog = DatePickerDialog(
-                this,
-                { _, year, month, dayOfMonth ->
-                    calendar.set(year, month, dayOfMonth)
+    private fun updateDateFields() {
+        etStartDate.setText(dateFormatter.format(startDate))
+        etEndDate.setText(dateFormatter.format(endDate))
+    }
+
+    private fun showDatePicker(isStartDate: Boolean) {
+        val calendar = Calendar.getInstance()
+        calendar.time = if (isStartDate) startDate else endDate
+
+        val datePickerDialog = DatePickerDialog(
+            this,
+            { _, year, month, dayOfMonth ->
+                calendar.set(Calendar.YEAR, year)
+                calendar.set(Calendar.MONTH, month)
+                calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+
+                if (isStartDate) {
+                    calendar.set(Calendar.HOUR_OF_DAY, 0)
+                    calendar.set(Calendar.MINUTE, 0)
+                    calendar.set(Calendar.SECOND, 0)
                     startDate = calendar.time
-                    updateDateText()
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            )
-            datePickerDialog.show()
-        }
-
-        etEndDate.setOnClickListener {
-            val calendar = Calendar.getInstance()
-            calendar.time = endDate ?: Date()
-            val datePickerDialog = DatePickerDialog(
-                this,
-                { _, year, month, dayOfMonth ->
-                    calendar.set(year, month, dayOfMonth)
+                    etStartDate.setText(dateFormatter.format(startDate))
+                } else {
+                    calendar.set(Calendar.HOUR_OF_DAY, 23)
+                    calendar.set(Calendar.MINUTE, 59)
+                    calendar.set(Calendar.SECOND, 59)
                     endDate = calendar.time
-                    updateDateText()
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            )
-            datePickerDialog.show()
-        }
+                    etEndDate.setText(dateFormatter.format(endDate))
+                }
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+        datePickerDialog.show()
     }
 
-    private fun updateDateText() {
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        startDate?.let { etStartDate.setText(dateFormat.format(it)) }
-        endDate?.let { etEndDate.setText(dateFormat.format(it)) }
-    }
-
-    private fun filterExpenses() {
-        if (startDate == null || endDate == null) {
-            Toast.makeText(this, "Please select both start and end dates", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val filteredList = expenseList.filter { expense ->
-            expense.date in startDate!!..endDate!!
-        }
-
-        adapter.submitList(filteredList)
-    }
-
-    private fun loadExpenses() {
+    private fun loadCategories() {
         lifecycleScope.launch {
-            combine(
-                database.expenseDao().getAllExpenses(),
-                database.categoryDao().getAllCategories()
-            ) { expenses, categories ->
-                val categoryMap = categories.associateBy({ it.id }, { it.name })
-                Triple(expenses, categoryMap, categories)
-            }.collect { (expenses, categoryMap, _) ->
-                adapter.categoryMap = categoryMap
-                expenseList = expenses
-                adapter.submitList(expenses)
+            database.categoryDao().getAllCategories().collectLatest { categories ->
+                categoryMap = categories.associateBy { it.id }
+                loadExpenses()
             }
         }
     }
 
-    class ExpenseAdapter : RecyclerView.Adapter<ExpenseAdapter.ExpenseViewHolder>() {
+    private fun loadExpenses() {
+        lifecycleScope.launch {
+            database.expenseDao().getExpensesByDateRange(startDate, endDate).collectLatest { expenses ->
+                adapter.updateExpenses(expenses, categoryMap)
 
-        private var expenses = listOf<Expense>()
+                val total = expenses.sumOf { it.amount }
+                tvTotalExpenses.text = "Total: $${String.format("%.2f", total)}"
+            }
+        }
+    }
 
-        inner class ExpenseViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            val imagePhoto: ImageView = itemView.findViewById(R.id.imagePhoto)
-            val textDescription: TextView = itemView.findViewById(R.id.textDescription)
-            val textAmount: TextView = itemView.findViewById(R.id.textAmount)
-            val textDate: TextView = itemView.findViewById(R.id.textDate)
-            val textCategory: TextView = itemView.findViewById(R.id.textCategory)
+    private fun onExpenseClick(expense: Expense) {
+        // Open detail view for the expense
+        val intent = Intent(this, ExpenseDetailActivity::class.java)
+        intent.putExtra("EXPENSE_ID", expense.id)
+        startActivity(intent)
+    }
+
+    // Custom adapter that works with the existing item_expense.xml layout
+    class ExpenseAdapter(
+        private var expenses: List<Expense>,
+        private var categoryMap: Map<Long, Category>,
+        private val onExpenseClick: (Expense) -> Unit
+    ) : RecyclerView.Adapter<ExpenseAdapter.ExpenseViewHolder>() {
+
+        fun updateExpenses(newExpenses: List<Expense>, newCategoryMap: Map<Long, Category>) {
+            expenses = newExpenses
+            categoryMap = newCategoryMap
+            notifyDataSetChanged()
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ExpenseViewHolder {
@@ -163,43 +177,41 @@ class ExpensesActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ExpenseViewHolder, position: Int) {
             val expense = expenses[position]
-            holder.textDescription.text = expense.description
-            holder.textAmount.text = "R${"%.2f".format(expense.amount)}"
-            holder.textDate.text = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(expense.date)
-
-            val categoryName = categoryMap[expense.categoryId] ?: "Unknown"
-            holder.textCategory.text = categoryName
-
-            val photoPath = expense.photoPath
-            if (!photoPath.isNullOrEmpty()) {
-                val file = File(photoPath)
-                if (file.exists()) {
-                    val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
-                    if (bitmap != null) {
-                        holder.imagePhoto.setImageBitmap(bitmap)
-                        holder.imagePhoto.visibility = View.VISIBLE
-                    } else {
-                        holder.imagePhoto.visibility = View.GONE
-                    }
-                } else {
-                    holder.imagePhoto.visibility = View.GONE
-                }
-            } else {
-                holder.imagePhoto.visibility = View.GONE
-            }
+            holder.bind(expense, categoryMap[expense.categoryId])
         }
 
         override fun getItemCount(): Int = expenses.size
 
-        fun submitList(newList: List<Expense>) {
-            expenses = newList
-            notifyDataSetChanged()
-        }
+        inner class ExpenseViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            private val amountTextView: TextView = itemView.findViewById(R.id.tvExpenseAmount)
+            private val dateTextView: TextView = itemView.findViewById(R.id.tvExpenseDate)
+            private val descriptionTextView: TextView = itemView.findViewById(R.id.tvExpenseDescription)
+            private val categoryTextView: TextView = itemView.findViewById(R.id.tvExpenseCategory)
+            private val photoIndicator: ImageView = itemView.findViewById(R.id.ivHasPhoto)
 
-        var categoryMap: Map<Long, String> = emptyMap()
-            set(value) {
-                field = value
-                notifyDataSetChanged()
+            fun bind(expense: Expense, category: Category?) {
+                amountTextView.text = "$${String.format("%.2f", expense.amount)}"
+                dateTextView.text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(expense.date)
+                descriptionTextView.text = expense.description
+
+                if (category != null) {
+                    categoryTextView.text = category.name
+                    categoryTextView.setBackgroundColor(category.color)
+                } else {
+                    categoryTextView.text = "Unknown"
+                    categoryTextView.setBackgroundColor(android.graphics.Color.GRAY)
+                }
+
+                if (!expense.photoPath.isNullOrEmpty()) {
+                    photoIndicator.visibility = View.VISIBLE
+                } else {
+                    photoIndicator.visibility = View.GONE
+                }
+
+                itemView.setOnClickListener {
+                    onExpenseClick(expense)
+                }
             }
+        }
     }
 }
