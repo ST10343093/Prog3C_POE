@@ -55,7 +55,7 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_marginEnd="8dp"
-        android:background="@drawable/button_color_picker"
+        android:background="@drawable/button_background"
         app:layout_constraintTop_toTopOf="@+id/tilCategoryName"
         app:layout_constraintBottom_toBottomOf="@+id/tilCategoryName"
         app:layout_constraintEnd_toStartOf="@+id/btnAddCategory" />

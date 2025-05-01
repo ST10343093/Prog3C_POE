@@ -11,10 +11,10 @@
 
     <!-- Title -->
     <TextView
-        android:id="@+id/tvExpensesTitle"
+        android:id="@+id/tvCategoryTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Expenses"
+        android:text="Spending By Category"
         android:textSize="24sp"
         android:textColor="@color/white"
         android:textAlignment="center"
@@ -28,7 +28,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp"
-        app:layout_constraintTop_toBottomOf="@+id/tvExpensesTitle"
+        app:layout_constraintTop_toBottomOf="@+id/tvCategoryTitle"
         app:layout_constraintBottom_toTopOf="@+id/rvExpenses"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -120,7 +120,7 @@
                 app:iconGravity="textEnd"
                 android:contentDescription="Clear"
                 app:backgroundTint="@color/off_white"
-            />
+                />
 
         </LinearLayout>
 
@@ -128,8 +128,8 @@
             android:id="@+id/buttonApplyFilter"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/button_background"
             android:text="Apply"
+            android:background="@drawable/button_background"
             android:textColor="@color/black"
             android:layout_margin="8dp" />
     </LinearLayout>
@@ -144,7 +144,7 @@
         app:layout_constraintBottom_toTopOf="@+id/btnBack"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        tools:listitem="@layout/item_expense" />
+        tools:listitem="@layout/item_categroty_expense" />
 
     <!-- Back Button -->
     <com.google.android.material.button.MaterialButton

@@ -17,6 +17,9 @@
         android:theme="@style/Theme.Prog3C"
         tools:targetApi="31">
         <activity
+            android:name=".CategoriesMonthlySpendingActivity"
+            android:exported="false" />
+        <activity
             android:name=".ExpensesActivity"
             android:exported="false" />
         <activity

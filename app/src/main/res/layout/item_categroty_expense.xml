@@ -27,14 +27,25 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/viewCategoryColor"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_margin="16dp"
+                android:background="@android:color/holo_blue_light"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
-                android:id="@+id/textDescription"
+                android:id="@+id/textCategoryName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Expense Description"
+                android:text="Category Name"
                 android:textStyle="bold"
+                android:layout_margin="16dp"
                 android:textSize="16sp" />
 
             <TextView
@@ -43,23 +54,8 @@
                 android:layout_height="wrap_content"
                 android:text="R0.00"
                 android:textColor="#388E3C"
+                android:layout_margin="16dp"
                 android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/textDate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="01 Jan 2025"
-                android:textSize="12sp"
-                android:textColor="#777" />
-
-            <TextView
-                android:id="@+id/textCategory"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Groceries"
-                android:textSize="12sp"
-                android:textColor="#555" />
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

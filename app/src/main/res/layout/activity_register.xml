@@ -123,7 +123,8 @@
             android:text="Register"
             android:padding="16dp"
             android:textSize="16dp"
-            android:textColor="@color/black" />
+            android:textColor="@color/black"
+            android:background="@drawable/button_background"/>
 
     </LinearLayout>
 
