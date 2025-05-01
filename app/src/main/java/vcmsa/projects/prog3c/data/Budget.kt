@@ -19,7 +19,8 @@ import java.util.Date
 data class Budget(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val amount: Double,
+    val minimumAmount: Double,
+    val maximumAmount: Double,
     val categoryId: Long,
     val startDate: Date,
     val endDate: Date
