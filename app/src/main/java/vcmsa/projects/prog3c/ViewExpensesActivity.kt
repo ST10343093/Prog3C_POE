@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -27,6 +28,7 @@ import java.util.Locale
 
 class ViewExpensesActivity : AppCompatActivity() {
 
+    private val TAG = "ViewExpensesActivity"
     private lateinit var database: AppDatabase
     private lateinit var etStartDate: TextInputEditText
     private lateinit var etEndDate: TextInputEditText
@@ -55,6 +57,8 @@ class ViewExpensesActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_view_expenses)
+
+        Log.d(TAG, "onCreate started")
 
         // Initialize database
         database = AppDatabase.getDatabase(this)
@@ -91,6 +95,8 @@ class ViewExpensesActivity : AppCompatActivity() {
 
         // Load categories and expenses
         loadCategories()
+
+        Log.d(TAG, "onCreate completed")
     }
 
     private fun updateDateFields() {
@@ -131,33 +137,60 @@ class ViewExpensesActivity : AppCompatActivity() {
     }
 
     private fun loadCategories() {
+        Log.d(TAG, "Loading categories")
         lifecycleScope.launch {
-            database.categoryDao().getAllCategories().collectLatest { categories ->
-                categoryMap = categories.associateBy { it.id }
-                loadExpenses()
+            try {
+                database.categoryDao().getAllCategories().collectLatest { categories ->
+                    categoryMap = categories.associateBy { it.id }
+                    Log.d(TAG, "Categories loaded: ${categories.size}")
+                    loadExpenses()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading categories", e)
+                Toast.makeText(this@ViewExpensesActivity, "Error loading categories", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun loadExpenses() {
+        Log.d(TAG, "Loading expenses from $startDate to $endDate")
         lifecycleScope.launch {
-            database.expenseDao().getExpensesByDateRange(startDate, endDate).collectLatest { expenses ->
-                adapter.updateExpenses(expenses, categoryMap)
+            try {
+                database.expenseDao().getExpensesByDateRange(startDate, endDate).collectLatest { expenses ->
+                    Log.d(TAG, "Expenses loaded: ${expenses.size}")
+                    adapter.updateExpenses(expenses, categoryMap)
 
-                val total = expenses.sumOf { it.amount }
-                tvTotalExpenses.text = "Total: $${String.format("%.2f", total)}"
+                    val total = expenses.sumOf { it.amount }
+                    tvTotalExpenses.text = "Total: $${String.format("%.2f", total)}"
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading expenses", e)
+                Toast.makeText(this@ViewExpensesActivity, "Error loading expenses", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun onExpenseClick(expense: Expense) {
-        // Open detail view for all expenses, not just those with photos
-        val intent = Intent(this, ExpenseDetailActivity::class.java)
-        intent.putExtra("EXPENSE_ID", expense.id)
-        startActivity(intent)
+        try {
+            Log.d(TAG, "Expense clicked: ID=${expense.id}, amount=${expense.amount}, description=${expense.description}")
+
+            // Create intent with explicit component name for added reliability
+            val intent = Intent()
+            intent.setClass(this@ViewExpensesActivity, ExpenseDetailActivity::class.java)
+            intent.putExtra("EXPENSE_ID", expense.id)
+
+            // Add flags to ensure proper navigation
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+            Log.d(TAG, "Starting ExpenseDetailActivity with expense ID: ${expense.id}")
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error opening expense details", e)
+            Toast.makeText(this, "Error opening expense details: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
-    private class ExpenseAdapter(
+    class ExpenseAdapter(
         private var expenses: List<Expense>,
         private var categoryMap: Map<Long, Category>,
         private val onExpenseClick: (Expense) -> Unit
@@ -202,13 +235,10 @@ class ViewExpensesActivity : AppCompatActivity() {
                     categoryTextView.setBackgroundColor(android.graphics.Color.GRAY)
                 }
 
-                // Show photo indicator if there's a photo
                 if (!expense.photoPath.isNullOrEmpty()) {
                     photoIndicator.visibility = View.VISIBLE
-                    Log.d("ViewExpensesActivity", "Photo available for expense: ${expense.id}, path: ${expense.photoPath}")
                 } else {
                     photoIndicator.visibility = View.GONE
-                    Log.d("ViewExpensesActivity", "No photo for expense: ${expense.id}")
                 }
 
                 itemView.setOnClickListener {

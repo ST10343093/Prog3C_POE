@@ -1,5 +1,6 @@
 package vcmsa.projects.prog3c
 
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
@@ -9,6 +10,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +22,6 @@ import vcmsa.projects.prog3c.data.Expense
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
-import android.content.Intent
 
 class ExpenseDetailActivity : AppCompatActivity() {
 
@@ -34,6 +35,8 @@ class ExpenseDetailActivity : AppCompatActivity() {
     private lateinit var btnDeleteExpense: Button
     private lateinit var btnBack: Button
     private var currentExpense: Expense? = null
+
+    private val TAG = "ExpenseDetail"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,108 +80,132 @@ class ExpenseDetailActivity : AppCompatActivity() {
             }
         }
 
-        // Get expense ID from intent
-        val expenseId = intent.getLongExtra("EXPENSE_ID", -1)
-        if (expenseId != -1L) {
-            loadExpenseDetails(expenseId)
-        } else {
-            finish() // Close if no valid ID
+        try {
+            // Get expense ID from intent
+            val expenseId = intent.getLongExtra("EXPENSE_ID", -1)
+            Log.d(TAG, "Received expense ID: $expenseId")
+
+            if (expenseId != -1L) {
+                loadExpenseDetails(expenseId)
+            } else {
+                Log.e(TAG, "Invalid expense ID: $expenseId")
+                Toast.makeText(this, "Invalid expense ID", Toast.LENGTH_SHORT).show()
+                finish() // Close if no valid ID
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onCreate", e)
+            Toast.makeText(this, "Error loading expense: ${e.message}", Toast.LENGTH_SHORT).show()
+            finish()
         }
     }
 
     private fun loadExpenseDetails(expenseId: Long) {
+        Log.d(TAG, "Loading expense details for ID: $expenseId")
         lifecycleScope.launch {
-            val expense = withContext(Dispatchers.IO) {
-                database.expenseDao().getExpenseById(expenseId)
-            }
+            try {
+                val expense = withContext(Dispatchers.IO) {
+                    database.expenseDao().getExpenseById(expenseId)
+                }
 
-            if (expense == null) {
+                if (expense == null) {
+                    Log.e(TAG, "Expense not found for ID: $expenseId")
+                    Toast.makeText(this@ExpenseDetailActivity, "Expense not found", Toast.LENGTH_SHORT).show()
+                    finish()
+                    return@launch
+                }
+
+                currentExpense = expense
+                Log.d(TAG, "Loaded expense: $expense")
+
+                val category = withContext(Dispatchers.IO) {
+                    database.categoryDao().getCategoryById(expense.categoryId)
+                }
+
+                displayExpenseDetails(expense, category)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading expense details", e)
+                Toast.makeText(this@ExpenseDetailActivity, "Error loading expense: ${e.message}", Toast.LENGTH_SHORT).show()
                 finish()
-                return@launch
             }
-
-            currentExpense = expense
-
-            val category = withContext(Dispatchers.IO) {
-                database.categoryDao().getCategoryById(expense.categoryId)
-            }
-
-            displayExpenseDetails(expense, category)
         }
     }
 
     private fun displayExpenseDetails(expense: Expense, category: Category?) {
-        // Format and display amount
-        tvExpenseAmount.text = "$${String.format("%.2f", expense.amount)}"
+        try {
+            // Format and display amount
+            tvExpenseAmount.text = "$${String.format("%.2f", expense.amount)}"
 
-        // Format and display date
-        val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
-        tvExpenseDate.text = dateFormat.format(expense.date)
+            // Format and display date
+            val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
+            tvExpenseDate.text = dateFormat.format(expense.date)
 
-        // Display description
-        tvExpenseDescription.text = expense.description
+            // Display description
+            tvExpenseDescription.text = expense.description
 
-        // Display category
-        if (category != null) {
-            tvExpenseCategory.text = category.name
-            tvExpenseCategory.setBackgroundColor(category.color)
-        } else {
-            tvExpenseCategory.text = "Unknown Category"
-            tvExpenseCategory.setBackgroundColor(android.graphics.Color.GRAY)
-        }
+            // Display category
+            if (category != null) {
+                tvExpenseCategory.text = category.name
+                tvExpenseCategory.setBackgroundColor(category.color)
+            } else {
+                tvExpenseCategory.text = "Unknown Category"
+                tvExpenseCategory.setBackgroundColor(android.graphics.Color.GRAY)
+            }
 
-        // Display photo if available
-        // Display photo if available
-        if (!expense.photoPath.isNullOrEmpty()) {
-            try {
-                // Log for debugging
-                Log.d("ExpenseDetail", "Photo path: ${expense.photoPath}")
+            // Display photo if available
+            if (!expense.photoPath.isNullOrEmpty()) {
+                try {
+                    // Log for debugging
+                    Log.d(TAG, "Photo path: ${expense.photoPath}")
 
-                if (expense.photoPath!!.startsWith("content://")) {
-                    // Handle content URI
-                    val uri = Uri.parse(expense.photoPath)
+                    if (expense.photoPath!!.startsWith("content://")) {
+                        // Handle content URI
+                        val uri = Uri.parse(expense.photoPath)
 
-                    // Take persistent URI permission
-                    try {
-                        contentResolver.takePersistableUriPermission(
-                            uri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        )
-                        Log.d("ExpenseDetail", "Took persistent permission for URI")
-                    } catch (e: SecurityException) {
-                        Log.e("ExpenseDetail", "Failed to take permission: ${e.message}")
-                        // Continue anyway, might still work
-                    }
+                        // Take persistent URI permission
+                        try {
+                            contentResolver.takePersistableUriPermission(
+                                uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                            Log.d(TAG, "Took persistent permission for URI")
+                        } catch (e: SecurityException) {
+                            Log.e(TAG, "Failed to take permission: ${e.message}")
+                            // Continue anyway, might still work
+                        }
 
-                    ivExpensePhoto.setImageURI(uri)
-                    ivExpensePhoto.visibility = View.VISIBLE
-                    Log.d("ExpenseDetail", "Loaded image from content URI")
-                } else {
-                    // Handle file path
-                    val photoFile = File(expense.photoPath!!)
-                    if (photoFile.exists()) {
-                        val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
-                        ivExpensePhoto.setImageBitmap(bitmap)
+                        ivExpensePhoto.setImageURI(uri)
                         ivExpensePhoto.visibility = View.VISIBLE
-                        Log.d("ExpenseDetail", "Loaded image from file path")
+                        Log.d(TAG, "Loaded image from content URI")
                     } else {
-                        Log.e("ExpenseDetail", "Photo file doesn't exist: ${expense.photoPath}")
-                        ivExpensePhoto.visibility = View.GONE
+                        // Handle file path
+                        val photoFile = File(expense.photoPath!!)
+                        if (photoFile.exists()) {
+                            val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
+                            ivExpensePhoto.setImageBitmap(bitmap)
+                            ivExpensePhoto.visibility = View.VISIBLE
+                            Log.d(TAG, "Loaded image from file path")
+                        } else {
+                            Log.e(TAG, "Photo file doesn't exist: ${expense.photoPath}")
+                            ivExpensePhoto.visibility = View.GONE
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error loading image", e)
+                    Toast.makeText(this, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
+                    ivExpensePhoto.visibility = View.GONE
                 }
-            } catch (e: Exception) {
-                Log.e("ExpenseDetail", "Error loading image", e)
-                Toast.makeText(this, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
+            } else {
+                Log.d(TAG, "No photo path available")
                 ivExpensePhoto.visibility = View.GONE
             }
-        } else {
-            Log.d("ExpenseDetail", "No photo path available")
-            ivExpensePhoto.visibility = View.GONE
+        } catch (e: Exception) {
+            Log.e(TAG, "Error displaying expense details", e)
+            Toast.makeText(this, "Error displaying expense details: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun showDeleteConfirmationDialog(expenseId: Long) {
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle("Delete Expense")
             .setMessage("Are you sure you want to delete this expense?")
             .setPositiveButton("Delete") { _, _ ->
@@ -190,26 +217,31 @@ class ExpenseDetailActivity : AppCompatActivity() {
 
     private fun deleteExpense(expenseId: Long) {
         lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                val expense = database.expenseDao().getExpenseById(expenseId)
-                if (expense != null) {
-                    database.expenseDao().deleteExpense(expense)
+            try {
+                withContext(Dispatchers.IO) {
+                    val expense = database.expenseDao().getExpenseById(expenseId)
+                    if (expense != null) {
+                        database.expenseDao().deleteExpense(expense)
 
-                    // Delete associated photo file if it exists
-                    if (!expense.photoPath.isNullOrEmpty()) {
-                        try {
-                            val photoFile = File(expense.photoPath)
-                            if (photoFile.exists()) {
-                                photoFile.delete()
+                        // Delete associated photo file if it exists
+                        if (!expense.photoPath.isNullOrEmpty() && !expense.photoPath!!.startsWith("content://")) {
+                            try {
+                                val photoFile = File(expense.photoPath!!)
+                                if (photoFile.exists()) {
+                                    photoFile.delete()
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error deleting photo file", e)
                             }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
                         }
                     }
                 }
+                Toast.makeText(this@ExpenseDetailActivity, "Expense deleted", Toast.LENGTH_SHORT).show()
+                finish()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting expense", e)
+                Toast.makeText(this@ExpenseDetailActivity, "Error deleting expense: ${e.message}", Toast.LENGTH_SHORT).show()
             }
-            Toast.makeText(this@ExpenseDetailActivity, "Expense deleted", Toast.LENGTH_SHORT).show()
-            finish()
         }
     }
 }
