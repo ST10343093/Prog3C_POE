@@ -4,17 +4,27 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="24dp"
+    android:background="@drawable/background_default"
+    android:layout_gravity="center"
     tools:context=".CategoriesActivity">
+
+    <!-- Title -->
     <TextView
         android:id="@+id/tvCategoriesTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Expense Categories"
-        android:textSize="20sp"
-        android:textStyle="bold"
+        android:textSize="24sp"
+        android:textColor="@color/white"
+        android:textAlignment="center"
+        style="@style/TextAppearance.MaterialComponents.Headline6"
+        android:layout_gravity="center"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Category Name Input -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilCategoryName"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -23,50 +33,78 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="8dp"
         android:hint="Category Name"
-        app:layout_constraintEnd_toStartOf="@+id/btnColorPicker"
+        android:textColorHint="@color/hint_color"
+        app:boxBackgroundColor="@color/white"
+        app:layout_constraintTop_toBottomOf="@+id/tvCategoriesTitle"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tvCategoriesTitle">
+        app:layout_constraintEnd_toStartOf="@+id/btnColorPicker">
+
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etCategoryName"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:inputType="text"
-            android:maxLines="1" />
+            android:maxLines="1"
+            android:gravity="center_vertical"
+            android:textColor="@color/black"/>
     </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Color Picker Button -->
     <Button
         android:id="@+id/btnColorPicker"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_marginEnd="8dp"
-        android:background="@android:color/holo_blue_light"
+        android:background="@drawable/button_background"
+        app:layout_constraintTop_toTopOf="@+id/tilCategoryName"
         app:layout_constraintBottom_toBottomOf="@+id/tilCategoryName"
-        app:layout_constraintEnd_toStartOf="@+id/btnAddCategory"
-        app:layout_constraintTop_toTopOf="@+id/tilCategoryName" />
+        app:layout_constraintEnd_toStartOf="@+id/btnAddCategory" />
+
+    <!-- Add Category Button -->
     <Button
         android:id="@+id/btnAddCategory"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:text="Add"
+        android:textSize="16dp"
+        android:textColor="@color/black"
+        android:background="@drawable/button_background"
+        app:icon="@drawable/ic_add"
+        app:iconPadding="8dp"
+        app:iconGravity="textStart"
+        app:iconTint="@color/black"
+        app:layout_constraintTop_toTopOf="@+id/btnColorPicker"
         app:layout_constraintBottom_toBottomOf="@+id/btnColorPicker"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/btnColorPicker" />
-    <Button
-        android:id="@+id/btnBack"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Back to Main Menu"
-        android:layout_marginBottom="16dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- RecyclerView for Categories -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvCategories"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
-        app:layout_constraintBottom_toTopOf="@+id/btnBack"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tilCategoryName"
+        app:layout_constraintBottom_toTopOf="@+id/btnBack"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         tools:listitem="@layout/item_category" />
+
+    <!-- Back Button -->
+    <Button
+        android:id="@+id/btnBack"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="16dp"
+        android:text="Back"
+        android:textSize="16dp"
+        android:textColor="@color/black"
+        app:icon="@drawable/ic_back"
+        app:iconPadding="8dp"
+        app:iconGravity="textStart"
+        app:iconTint="@color/black"
+        style="@style/SecondaryButton"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

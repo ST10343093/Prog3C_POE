@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
         // Add navigation to View Expenses screen
         val viewExpensesButton = findViewById<Button>(R.id.btnViewExpenses)
         viewExpensesButton.setOnClickListener {
-            val intent = Intent(this, ViewExpensesActivity::class.java)
+            val intent = Intent(this, ExpensesActivity::class.java)
             startActivity(intent)
         }
 
@@ -57,6 +57,13 @@ class MainActivity : AppCompatActivity() {
         val setBudgetButton = findViewById<Button>(R.id.btnSetBudget)
         setBudgetButton.setOnClickListener {
             val intent = Intent(this, BudgetActivity::class.java)
+            startActivity(intent)
+        }
+
+        // Add navigation to Budget screen
+        val viewSpendingCategoryButton = findViewById<Button>(R.id.btnViewSpendingByCategory)
+        viewSpendingCategoryButton.setOnClickListener {
+            val intent = Intent(this, CategoriesMonthlySpendingActivity::class.java)
             startActivity(intent)
         }
 

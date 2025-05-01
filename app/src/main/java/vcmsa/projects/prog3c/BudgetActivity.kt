@@ -1,31 +1,41 @@
 package vcmsa.projects.prog3c
 
+import android.app.Activity
 import android.app.DatePickerDialog
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Log
 import android.view.View
-import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import vcmsa.projects.prog3c.data.AppDatabase
 import vcmsa.projects.prog3c.data.Budget
 import vcmsa.projects.prog3c.data.Category
+import vcmsa.projects.prog3c.data.Expense
+import java.io.File
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -34,109 +44,102 @@ import java.util.Locale
 class BudgetActivity : AppCompatActivity() {
 
     private lateinit var database: AppDatabase
-    private lateinit var spinnerCategory: Spinner
-    private lateinit var etBudgetAmount: TextInputEditText
+    private lateinit var etMinimumGoal: TextInputEditText
+    private lateinit var etMaximumGoal: TextInputEditText
     private lateinit var etStartDate: TextInputEditText
     private lateinit var etEndDate: TextInputEditText
+    private lateinit var spinnerCategory: Spinner
     private lateinit var btnSaveBudget: Button
-    private lateinit var rvBudgets: RecyclerView
     private lateinit var btnBackFromBudget: Button
-    private lateinit var adapter: BudgetAdapter
 
+    private var startDate: Date = Date()
+    private var endDate: Date = Date()
     private var selectedCategoryId: Long = -1
     private var categories: List<Category> = emptyList()
-    private var startDate: Date = Calendar.getInstance().apply {
-        set(Calendar.DAY_OF_MONTH, 1) // First day of month
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-    }.time
-    private var endDate: Date = Calendar.getInstance().apply {
-        set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH)) // Last day of month
-        set(Calendar.HOUR_OF_DAY, 23)
-        set(Calendar.MINUTE, 59)
-        set(Calendar.SECOND, 59)
-    }.time
-
-    private val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContentView(R.layout.activity_budget)
 
         // Initialize database
         database = AppDatabase.getDatabase(this)
 
         // Initialize views
-        spinnerCategory = findViewById(R.id.spinnerBudgetCategory)
-        etBudgetAmount = findViewById(R.id.etBudgetAmount)
+        etMinimumGoal = findViewById(R.id.etMinimumGoal)
+        etMaximumGoal = findViewById(R.id.etMaximumGoal)
         etStartDate = findViewById(R.id.etStartDate)
         etEndDate = findViewById(R.id.etEndDate)
+        spinnerCategory = findViewById(R.id.spinnerCategory)
         btnSaveBudget = findViewById(R.id.btnSaveBudget)
-        rvBudgets = findViewById(R.id.rvBudgets)
         btnBackFromBudget = findViewById(R.id.btnBackFromBudget)
 
-        // Update date fields
-        updateDateFields()
+        // Set up date picker
+        setupDatePicker()
 
-        // Set up date pickers
-        etStartDate.setOnClickListener { showDatePicker(true) }
-        etEndDate.setOnClickListener { showDatePicker(false) }
+        // Set default date to today
+        updateDateText()
 
-        // Set up RecyclerView
-        adapter = BudgetAdapter(emptyList(), emptyMap(), ::deleteBudget)
-        rvBudgets.adapter = adapter
-        rvBudgets.layoutManager = LinearLayoutManager(this)
+        // Load categories for spinner
+        loadCategories()
+
+        // Set up back button
+        btnBackFromBudget.setOnClickListener {
+            finish() // This will close the current activity and return to the previous one
+        }
 
         // Set up save button
         btnSaveBudget.setOnClickListener {
             saveBudget()
         }
+    }
 
-        // Set up back button
-        btnBackFromBudget.setOnClickListener {
-            finish()
+    private fun setupDatePicker() {
+        etStartDate.setOnClickListener {
+            val calendar = Calendar.getInstance()
+            calendar.time = startDate
+
+            val datePickerDialog = DatePickerDialog(
+                this,
+                { _, year, month, dayOfMonth ->
+                    calendar.set(Calendar.YEAR, year)
+                    calendar.set(Calendar.MONTH, month)
+                    calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                    startDate = calendar.time
+                    updateDateText()
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            )
+            datePickerDialog.show()
         }
 
-        // Load categories and budgets
-        loadCategories()
-    }
+        etEndDate.setOnClickListener {
+            val calendar = Calendar.getInstance()
+            calendar.time = endDate
 
-    private fun updateDateFields() {
-        etStartDate.setText(dateFormatter.format(startDate))
-        etEndDate.setText(dateFormatter.format(endDate))
-    }
-
-    private fun showDatePicker(isStartDate: Boolean) {
-        val calendar = Calendar.getInstance()
-        calendar.time = if (isStartDate) startDate else endDate
-
-        val datePickerDialog = DatePickerDialog(
-            this,
-            { _, year, month, dayOfMonth ->
-                calendar.set(Calendar.YEAR, year)
-                calendar.set(Calendar.MONTH, month)
-                calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-
-                if (isStartDate) {
-                    calendar.set(Calendar.HOUR_OF_DAY, 0)
-                    calendar.set(Calendar.MINUTE, 0)
-                    calendar.set(Calendar.SECOND, 0)
-                    startDate = calendar.time
-                    etStartDate.setText(dateFormatter.format(startDate))
-                } else {
-                    calendar.set(Calendar.HOUR_OF_DAY, 23)
-                    calendar.set(Calendar.MINUTE, 59)
-                    calendar.set(Calendar.SECOND, 59)
+            val datePickerDialog = DatePickerDialog(
+                this,
+                { _, year, month, dayOfMonth ->
+                    calendar.set(Calendar.YEAR, year)
+                    calendar.set(Calendar.MONTH, month)
+                    calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
                     endDate = calendar.time
-                    etEndDate.setText(dateFormatter.format(endDate))
-                }
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        )
-        datePickerDialog.show()
+                    updateDateText()
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            )
+            datePickerDialog.show()
+        }
+    }
+
+    private fun updateDateText() {
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        etStartDate.setText(dateFormat.format(startDate))
+        etEndDate.setText(dateFormat.format(endDate))
     }
 
     private fun loadCategories() {
@@ -180,42 +183,51 @@ class BudgetActivity : AppCompatActivity() {
                     // Do nothing
                 }
             }
-
-            // Load budgets
-            loadBudgets()
-        }
-    }
-
-    private fun loadBudgets() {
-        lifecycleScope.launch {
-            database.budgetDao().getAllBudgets().collectLatest { budgets ->
-                val categoryMap = categories.associateBy { it.id }
-                adapter.updateBudgets(budgets, categoryMap)
-            }
         }
     }
 
     private fun saveBudget() {
-        val amountText = etBudgetAmount.text.toString().trim()
+        val minAmountText = etMinimumGoal.text.toString().trim()
+        val maxAmountText = etMaximumGoal.text.toString().trim()
 
         // Validate inputs
-        if (amountText.isEmpty()) {
-            etBudgetAmount.error = "Amount is required"
-            etBudgetAmount.requestFocus()
+        if (minAmountText.isEmpty()) {
+            etMinimumGoal.error = "Amount is required"
+            etMinimumGoal.requestFocus()
             return
         }
 
-        val amount = try {
-            amountText.toDouble()
+        if (maxAmountText.isEmpty()) {
+            etMaximumGoal.error = "Amount is required"
+            etMaximumGoal.requestFocus()
+            return
+        }
+
+        val minAmount = try {
+            minAmountText.toDouble()
         } catch (e: NumberFormatException) {
-            etBudgetAmount.error = "Invalid amount format"
-            etBudgetAmount.requestFocus()
+            etMinimumGoal.error = "Invalid amount format"
+            etMinimumGoal.requestFocus()
             return
         }
 
-        if (amount <= 0) {
-            etBudgetAmount.error = "Amount must be greater than zero"
-            etBudgetAmount.requestFocus()
+        val maxAmount = try {
+            maxAmountText.toDouble()
+        } catch (e: NumberFormatException) {
+            etMaximumGoal.error = "Invalid amount format"
+            etMaximumGoal.requestFocus()
+            return
+        }
+
+        if (minAmount<= 0) {
+            etMinimumGoal.error = "Amount must be greater than zero"
+            etMinimumGoal.requestFocus()
+            return
+        }
+
+        if (maxAmount<= 0) {
+            etMinimumGoal.error = "Amount must be greater than zero"
+            etMinimumGoal.requestFocus()
             return
         }
 
@@ -224,119 +236,26 @@ class BudgetActivity : AppCompatActivity() {
             return
         }
 
-        if (startDate.after(endDate)) {
-            Toast.makeText(this, "Start date cannot be after end date", Toast.LENGTH_SHORT).show()
-            return
-        }
-
         // Create budget object
-        val budget = Budget(
-            amount = amount,
-            categoryId = selectedCategoryId,
-            startDate = startDate,
-            endDate = endDate
-        )
+        val budget =
+            Budget(
+         minimumAmount = minAmount,
+        maximumAmount = maxAmount,
+        categoryId = selectedCategoryId,
+        startDate = startDate,
+        endDate = endDate
+            )
 
-        // Save budget to database
+
+        // Save expense to database
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                database.budgetDao().insertBudget(budget)
+                    database.budgetDao().insertBudget(budget)
             }
-            Toast.makeText(this@BudgetActivity, "Budget saved", Toast.LENGTH_SHORT).show()
-            etBudgetAmount.text?.clear()
-            etBudgetAmount.clearFocus()
-        }
-    }
 
-    private fun deleteBudget(budget: Budget) {
-        AlertDialog.Builder(this)
-            .setTitle("Delete Budget")
-            .setMessage("Are you sure you want to delete this budget?")
-            .setPositiveButton("Delete") { _, _ ->
-                lifecycleScope.launch {
-                    withContext(Dispatchers.IO) {
-                        database.budgetDao().deleteBudget(budget)
-                    }
-                    Toast.makeText(this@BudgetActivity, "Budget deleted", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private inner class BudgetAdapter(
-        private var budgets: List<Budget>,
-        private var categoryMap: Map<Long, Category>,
-        private val onDeleteClick: (Budget) -> Unit
-    ) : RecyclerView.Adapter<BudgetAdapter.BudgetViewHolder>() {
-
-        fun updateBudgets(newBudgets: List<Budget>, newCategoryMap: Map<Long, Category>) {
-            budgets = newBudgets
-            categoryMap = newCategoryMap
-            notifyDataSetChanged()
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BudgetViewHolder {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_budget, parent, false)
-            return BudgetViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: BudgetViewHolder, position: Int) {
-            val budget = budgets[position]
-            holder.bind(budget)
-        }
-
-        override fun getItemCount(): Int = budgets.size
-
-        inner class BudgetViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            private val tvBudgetCategory: TextView = itemView.findViewById(R.id.tvBudgetCategory)
-            private val tvBudgetAmount: TextView = itemView.findViewById(R.id.tvBudgetAmount)
-            private val tvBudgetPeriod: TextView = itemView.findViewById(R.id.tvBudgetPeriod)
-            private val tvBudgetSpent: TextView = itemView.findViewById(R.id.tvBudgetSpent)
-            private val tvBudgetRemaining: TextView = itemView.findViewById(R.id.tvBudgetRemaining)
-            private val btnDeleteBudget: ImageButton = itemView.findViewById(R.id.btnDeleteBudget)
-
-            fun bind(budget: Budget) {
-                val category = categoryMap[budget.categoryId]
-                if (category != null) {
-                    tvBudgetCategory.text = category.name
-                    tvBudgetCategory.setBackgroundColor(category.color)
-                } else {
-                    tvBudgetCategory.text = "Unknown Category"
-                    tvBudgetCategory.setBackgroundColor(android.graphics.Color.GRAY)
-                }
-
-                tvBudgetAmount.text = "Budget: $${String.format("%.2f", budget.amount)}"
-                tvBudgetPeriod.text = "${dateFormatter.format(budget.startDate)} - ${dateFormatter.format(budget.endDate)}"
-
-                // Calculate amount spent and remaining
-                lifecycleScope.launch {
-                    val spent = withContext(Dispatchers.IO) {
-                        database.expenseDao().getTotalExpenseByCategory(
-                            budget.categoryId,
-                            budget.startDate,
-                            budget.endDate
-                        ) ?: 0.0
-                    }
-                    val remaining = budget.amount - spent
-                    tvBudgetSpent.text = "Spent: $${String.format("%.2f", spent)}"
-                    tvBudgetRemaining.text = "Remaining: $${String.format("%.2f", remaining)}"
-
-                    // Change color based on budget status
-                    if (remaining < 0) {
-                        tvBudgetRemaining.setTextColor(android.graphics.Color.RED)
-                    } else if (remaining < (budget.amount * 0.2)) {
-                        tvBudgetRemaining.setTextColor(android.graphics.Color.parseColor("#FFA500")) // Orange
-                    } else {
-                        tvBudgetRemaining.setTextColor(android.graphics.Color.parseColor("#4CAF50")) // Green
-                    }
-                }
-
-                btnDeleteBudget.setOnClickListener {
-                    onDeleteClick(budget)
-                }
-            }
+            val message = "Budget saved"
+            Toast.makeText(this@BudgetActivity, message, Toast.LENGTH_SHORT).show()
+            finish()
         }
     }
 }
