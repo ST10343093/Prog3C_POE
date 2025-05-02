@@ -23,8 +23,14 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+/**
+ * Activity for displaying details of a single expense
+ * Shows all expense information including amount, date, description, category, and receipt photo if available
+ * Provides options to edit or delete the expense
+ */
 class ExpenseDetailActivity : AppCompatActivity() {
 
+    // Database and UI component references
     private lateinit var database: AppDatabase
     private lateinit var tvExpenseAmount: TextView
     private lateinit var tvExpenseDate: TextView
@@ -36,8 +42,12 @@ class ExpenseDetailActivity : AppCompatActivity() {
     private lateinit var btnBack: Button
     private var currentExpense: Expense? = null
 
+    // Logging tag
     private val TAG = "ExpenseDetail"
 
+    /**
+     * Initialize the activity, set up UI components and event handlers
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_expense_detail)
@@ -60,7 +70,7 @@ class ExpenseDetailActivity : AppCompatActivity() {
             finish()
         }
 
-        // Set up edit button
+        // Set up edit button - navigate to AddExpenseActivity in edit mode
         btnEditExpense.setOnClickListener {
             val expenseId = intent.getLongExtra("EXPENSE_ID", -1)
             if (expenseId != -1L) {
@@ -72,7 +82,7 @@ class ExpenseDetailActivity : AppCompatActivity() {
             }
         }
 
-        // Set up delete button
+        // Set up delete button - show confirmation dialog before deleting
         btnDeleteExpense.setOnClickListener {
             val expenseId = intent.getLongExtra("EXPENSE_ID", -1)
             if (expenseId != -1L) {
@@ -99,10 +109,17 @@ class ExpenseDetailActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Load expense details from the database using the provided ID
+     * Fetches the associated category information as well
+     *
+     * @param expenseId The ID of the expense to load
+     */
     private fun loadExpenseDetails(expenseId: Long) {
         Log.d(TAG, "Loading expense details for ID: $expenseId")
         lifecycleScope.launch {
             try {
+                // Fetch expense from database
                 val expense = withContext(Dispatchers.IO) {
                     database.expenseDao().getExpenseById(expenseId)
                 }
@@ -117,10 +134,12 @@ class ExpenseDetailActivity : AppCompatActivity() {
                 currentExpense = expense
                 Log.d(TAG, "Loaded expense: $expense")
 
+                // Fetch the category associated with this expense
                 val category = withContext(Dispatchers.IO) {
                     database.categoryDao().getCategoryById(expense.categoryId)
                 }
 
+                // Display the loaded expense details
                 displayExpenseDetails(expense, category)
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading expense details", e)
@@ -130,10 +149,17 @@ class ExpenseDetailActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Display expense details in the UI
+     * Formats amount and date, displays description and category, and loads the photo if available
+     *
+     * @param expense The expense object to display
+     * @param category The category object associated with the expense
+     */
     private fun displayExpenseDetails(expense: Expense, category: Category?) {
         try {
-            // Format and display amount
-            tvExpenseAmount.text = "$${String.format("%.2f", expense.amount)}"
+            // Format and display amount - Using Rand (R) currency symbol
+            tvExpenseAmount.text = "R" + String.format("%.2f", expense.amount)
 
             // Format and display date
             val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
@@ -151,17 +177,17 @@ class ExpenseDetailActivity : AppCompatActivity() {
                 tvExpenseCategory.setBackgroundColor(android.graphics.Color.GRAY)
             }
 
-            // Display photo if available
+            // Handle photo display - supports both content URIs and file paths
             if (!expense.photoPath.isNullOrEmpty()) {
                 try {
                     // Log for debugging
                     Log.d(TAG, "Photo path: ${expense.photoPath}")
 
                     if (expense.photoPath!!.startsWith("content://")) {
-                        // Handle content URI
+                        // Handle content URI (photos selected from gallery)
                         val uri = Uri.parse(expense.photoPath)
 
-                        // Take persistent URI permission
+                        // Attempt to take persistent URI permission to access the photo
                         try {
                             contentResolver.takePersistableUriPermission(
                                 uri,
@@ -177,7 +203,7 @@ class ExpenseDetailActivity : AppCompatActivity() {
                         ivExpensePhoto.visibility = View.VISIBLE
                         Log.d(TAG, "Loaded image from content URI")
                     } else {
-                        // Handle file path
+                        // Handle file path (photos taken with camera)
                         val photoFile = File(expense.photoPath!!)
                         if (photoFile.exists()) {
                             val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
@@ -204,6 +230,11 @@ class ExpenseDetailActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Shows a confirmation dialog before deleting an expense
+     *
+     * @param expenseId The ID of the expense to delete
+     */
     private fun showDeleteConfirmationDialog(expenseId: Long) {
         AlertDialog.Builder(this)
             .setTitle("Delete Expense")
@@ -215,15 +246,22 @@ class ExpenseDetailActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Deletes the expense from the database
+     * Also deletes associated photo file if it exists
+     *
+     * @param expenseId The ID of the expense to delete
+     */
     private fun deleteExpense(expenseId: Long) {
         lifecycleScope.launch {
             try {
                 withContext(Dispatchers.IO) {
                     val expense = database.expenseDao().getExpenseById(expenseId)
                     if (expense != null) {
+                        // Delete expense from database
                         database.expenseDao().deleteExpense(expense)
 
-                        // Delete associated photo file if it exists
+                        // Clean up associated photo file if it exists
                         if (!expense.photoPath.isNullOrEmpty() && !expense.photoPath!!.startsWith("content://")) {
                             try {
                                 val photoFile = File(expense.photoPath!!)

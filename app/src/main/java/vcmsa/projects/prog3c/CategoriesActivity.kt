@@ -23,10 +23,20 @@ import vcmsa.projects.prog3c.data.AppDatabase
 import vcmsa.projects.prog3c.data.Category
 import yuku.ambilwarna.AmbilWarnaDialog
 
+/**
+ * Activity for managing expense categories
+ * Allows users to create, edit, and delete expense categories
+ * Each category has a name and a color for visual identification
+ */
 class CategoriesActivity : AppCompatActivity() {
 
+    // Database reference
     private lateinit var database: AppDatabase
+
+    // RecyclerView adapter for displaying categories
     private lateinit var adapter: CategoryAdapter
+
+    // Currently selected color for new categories
     private var selectedColor: Int = Color.BLUE
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,11 +102,19 @@ class CategoriesActivity : AppCompatActivity() {
         loadCategories()
     }
 
+    /**
+     * Handles the back button in the action bar
+     * @return Boolean Always returns true to indicate the event was handled
+     */
     override fun onSupportNavigateUp(): Boolean {
         onBackPressed()
         return true
     }
 
+    /**
+     * Loads categories from the database and updates the RecyclerView
+     * Uses Flow to automatically update when data changes
+     */
     private fun loadCategories() {
         lifecycleScope.launch {
             database.categoryDao().getAllCategories().collectLatest { categories ->
@@ -105,6 +123,10 @@ class CategoriesActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Opens a color picker dialog to select a color for new categories
+     * Uses AmbilWarnaDialog library for color selection
+     */
     private fun openColorPicker() {
         val colorPicker = AmbilWarnaDialog(this, selectedColor,
             object : AmbilWarnaDialog.OnAmbilWarnaListener {
@@ -120,6 +142,11 @@ class CategoriesActivity : AppCompatActivity() {
         colorPicker.show()
     }
 
+    /**
+     * Opens a dialog to edit an existing category
+     * Allows changing the name and color of the category
+     * @param category The category to edit
+     */
     private fun editCategory(category: Category) {
         // Inflate the dialog layout
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_category, null)
@@ -172,6 +199,11 @@ class CategoriesActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    /**
+     * Shows a confirmation dialog and deletes a category if confirmed
+     * Warns the user that associated expenses will also be deleted
+     * @param category The category to delete
+     */
     private fun deleteCategory(category: Category) {
         // Show confirmation dialog
         AlertDialog.Builder(this)
@@ -190,37 +222,63 @@ class CategoriesActivity : AppCompatActivity() {
             .show()
     }
 
-    // Adapter for the RecyclerView
+    /**
+     * RecyclerView adapter for displaying categories in a list
+     * @param categories Initial list of categories
+     * @param onEditClick Callback function when edit button is clicked
+     * @param onDeleteClick Callback function when delete button is clicked
+     */
     private class CategoryAdapter(
         private var categories: List<Category>,
         private val onEditClick: (Category) -> Unit,
         private val onDeleteClick: (Category) -> Unit
     ) : RecyclerView.Adapter<CategoryAdapter.CategoryViewHolder>() {
 
+        /**
+         * Updates the list of categories and refreshes the display
+         * @param newCategories New list of categories to display
+         */
         fun updateCategories(newCategories: List<Category>) {
             categories = newCategories
             notifyDataSetChanged()
         }
 
+        /**
+         * Creates new ViewHolder instances for the RecyclerView
+         */
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CategoryViewHolder {
             val view = LayoutInflater.from(parent.context)
                 .inflate(R.layout.item_category, parent, false)
             return CategoryViewHolder(view)
         }
 
+        /**
+         * Binds category data to the ViewHolder
+         */
         override fun onBindViewHolder(holder: CategoryViewHolder, position: Int) {
             val category = categories[position]
             holder.bind(category)
         }
 
+        /**
+         * Returns the total number of categories
+         */
         override fun getItemCount(): Int = categories.size
 
+        /**
+         * ViewHolder class for individual category items
+         * @param itemView The view for this item
+         */
         inner class CategoryViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val nameTextView: TextView = itemView.findViewById(R.id.tvCategoryName)
             private val colorView: View = itemView.findViewById(R.id.viewCategoryColor)
             private val editButton: ImageButton = itemView.findViewById(R.id.btnEditCategory)
             private val deleteButton: ImageButton = itemView.findViewById(R.id.btnDeleteCategory)
 
+            /**
+             * Binds category data to the view elements and sets up click listeners
+             * @param category The category to display
+             */
             fun bind(category: Category) {
                 nameTextView.text = category.name
                 colorView.setBackgroundColor(category.color)

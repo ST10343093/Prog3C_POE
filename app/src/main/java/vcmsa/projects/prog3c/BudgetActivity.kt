@@ -41,9 +41,17 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Activity for creating budget goals for expense categories
+ * Allows users to set minimum and maximum spending targets for specific categories
+ * within a defined time period
+ */
 class BudgetActivity : AppCompatActivity() {
 
+    // Database reference
     private lateinit var database: AppDatabase
+
+    // UI elements
     private lateinit var etMinimumGoal: TextInputEditText
     private lateinit var etMaximumGoal: TextInputEditText
     private lateinit var etStartDate: TextInputEditText
@@ -52,10 +60,11 @@ class BudgetActivity : AppCompatActivity() {
     private lateinit var btnSaveBudget: Button
     private lateinit var btnBackFromBudget: Button
 
-    private var startDate: Date = Date()
-    private var endDate: Date = Date()
-    private var selectedCategoryId: Long = -1
-    private var categories: List<Category> = emptyList()
+    // Data variables
+    private var startDate: Date = Date()                // Budget period start date
+    private var endDate: Date = Date()                  // Budget period end date
+    private var selectedCategoryId: Long = -1          // Currently selected category ID
+    private var categories: List<Category> = emptyList() // List of available categories
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,6 +103,10 @@ class BudgetActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Sets up the date picker dialogs for selecting budget period dates
+     * Makes both date fields clickable to open a date picker
+     */
     private fun setupDatePicker() {
         etStartDate.setOnClickListener {
             val calendar = Calendar.getInstance()
@@ -136,12 +149,19 @@ class BudgetActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Updates the text in both date fields to display the selected dates
+     */
     private fun updateDateText() {
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         etStartDate.setText(dateFormat.format(startDate))
         etEndDate.setText(dateFormat.format(endDate))
     }
 
+    /**
+     * Loads categories from the database and sets up the category spinner
+     * Exits the activity if no categories are available
+     */
     private fun loadCategories() {
         lifecycleScope.launch {
             categories = database.categoryDao().getAllCategories().first()
@@ -186,6 +206,10 @@ class BudgetActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Validates input fields and saves the budget to the database
+     * Creates a new budget with target spending limits for the selected category
+     */
     private fun saveBudget() {
         val minAmountText = etMinimumGoal.text.toString().trim()
         val maxAmountText = etMaximumGoal.text.toString().trim()
@@ -239,18 +263,18 @@ class BudgetActivity : AppCompatActivity() {
         // Create budget object
         val budget =
             Budget(
-         minimumAmount = minAmount,
-        maximumAmount = maxAmount,
-        categoryId = selectedCategoryId,
-        startDate = startDate,
-        endDate = endDate
+                minimumAmount = minAmount,
+                maximumAmount = maxAmount,
+                categoryId = selectedCategoryId,
+                startDate = startDate,
+                endDate = endDate
             )
 
 
         // Save expense to database
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                    database.budgetDao().insertBudget(budget)
+                database.budgetDao().insertBudget(budget)
             }
 
             val message = "Budget saved"

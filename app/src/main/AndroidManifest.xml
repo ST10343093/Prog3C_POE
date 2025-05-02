@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <!-- Permissions for storage access and image handling -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
@@ -14,15 +15,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Prog3C"
         tools:targetApi="31">
+        <!-- Activity for viewing monthly spending by category -->
         <activity
             android:name=".CategoriesMonthlySpendingActivity"
             android:exported="false" />
+        <!-- Activity for expenses management -->
         <activity
             android:name=".ExpensesActivity"
             android:exported="false" />
+        <!-- Activity for budget management -->
         <activity
             android:name=".BudgetActivity"
             android:exported="false" />
+        <!-- Welcome screen - entry point of the application -->
         <activity
             android:name=".WelcomeActivity"
             android:exported="true">
@@ -31,18 +36,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- User authentication - login screen -->
         <activity
             android:name=".LoginActivity"
             android:exported="false" />
+        <!-- User authentication - registration screen -->
         <activity
             android:name=".RegisterActivity"
             android:exported="false" />
+        <!-- Main dashboard after login -->
         <activity
             android:name=".MainActivity"
             android:exported="false" />
+        <!-- Expense categories management screen -->
         <activity
             android:name=".CategoriesActivity"
             android:exported="false" />
+        <!-- Screen for adding a new expense -->
         <activity
             android:name=".AddExpenseActivity"
             android:exported="false" />
@@ -55,7 +65,7 @@
             android:name=".ExpenseDetailActivity"
             android:exported="false"
             android:launchMode="singleTop" />
-
+        <!-- File provider for camera functionality - enables sharing files between the app and camera -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="vcmsa.projects.prog3c.fileprovider"

@@ -38,9 +38,16 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Activity for adding new expenses or editing existing ones
+ * Allows users to enter expense details, select categories, and attach receipt photos
+ */
 class AddExpenseActivity : AppCompatActivity() {
 
+    // Database reference
     private lateinit var database: AppDatabase
+
+    // UI elements
     private lateinit var etAmount: TextInputEditText
     private lateinit var etDescription: TextInputEditText
     private lateinit var etDate: TextInputEditText
@@ -51,20 +58,23 @@ class AddExpenseActivity : AppCompatActivity() {
     private lateinit var btnSaveExpense: Button
     private lateinit var btnBackFromExpense: Button
 
-    private var selectedDate: Date = Date()
-    private var selectedCategoryId: Long = -1
-    private var categories: List<Category> = emptyList()
-    private var currentPhotoPath: String? = null
-    private var photoUri: Uri? = null
+    // Data variables
+    private var selectedDate: Date = Date()            // Currently selected date
+    private var selectedCategoryId: Long = -1          // Currently selected category ID
+    private var categories: List<Category> = emptyList() // List of available categories
+    private var currentPhotoPath: String? = null       // File path to stored photo
+    private var photoUri: Uri? = null                  // URI reference to photo
 
-    private var isEditMode = false
-    private var currentExpenseId: Long = -1
+    // Edit mode variables
+    private var isEditMode = false                     // Whether we're editing existing expense
+    private var currentExpenseId: Long = -1            // ID of expense being edited
 
     companion object {
+        // Constants for activity result handling
         private const val REQUEST_IMAGE_CAPTURE = 1
         private const val REQUEST_GALLERY_IMAGE = 2
         private const val REQUEST_CAMERA_PERMISSION = 100
-        private const val TAG = "AddExpenseActivity"
+        private const val TAG = "AddExpenseActivity"    // Tag for logging
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -131,6 +141,10 @@ class AddExpenseActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Sets up the date picker dialog for selecting expense date
+     * Makes the date field clickable to open a date picker
+     */
     private fun setupDatePicker() {
         etDate.setOnClickListener {
             val calendar = Calendar.getInstance()
@@ -153,11 +167,18 @@ class AddExpenseActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Updates the text in the date field to display the currently selected date
+     */
     private fun updateDateText() {
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         etDate.setText(dateFormat.format(selectedDate))
     }
 
+    /**
+     * Loads categories from the database and sets up the category spinner
+     * Exits the activity if no categories are available
+     */
     private fun loadCategories() {
         lifecycleScope.launch {
             categories = database.categoryDao().getAllCategories().first()
@@ -215,6 +236,11 @@ class AddExpenseActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Loads expense data when in edit mode
+     * Populates the form with the existing expense details
+     * @param expenseId ID of the expense to edit
+     */
     private fun loadExpenseForEdit(expenseId: Long) {
         lifecycleScope.launch {
             val expense = withContext(Dispatchers.IO) {
@@ -266,6 +292,10 @@ class AddExpenseActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Opens the device gallery to select an image
+     * Uses ACTION_OPEN_DOCUMENT to get persistable URI permissions
+     */
     private fun openGallery() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
         intent.addCategory(Intent.CATEGORY_OPENABLE)
@@ -274,6 +304,10 @@ class AddExpenseActivity : AppCompatActivity() {
         startActivityForResult(intent, REQUEST_GALLERY_IMAGE)
     }
 
+    /**
+     * Checks and requests camera permission if needed
+     * Launches camera if permission is granted
+     */
     private fun checkCameraPermission() {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -290,6 +324,10 @@ class AddExpenseActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Handles permission request results
+     * Launches camera if permission is granted
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -309,6 +347,10 @@ class AddExpenseActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Launches the camera app to take a photo
+     * Creates a file to store the photo and passes it to the camera app
+     */
     private fun dispatchTakePictureIntent() {
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
             takePictureIntent.resolveActivity(packageManager)?.also {
@@ -336,6 +378,11 @@ class AddExpenseActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Creates a new image file with unique name to store the photo
+     * @return File The created empty file
+     * @throws IOException If file creation fails
+     */
     @Throws(IOException::class)
     private fun createImageFile(): File {
         // Create an image file name
@@ -352,6 +399,10 @@ class AddExpenseActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Handles results from camera and gallery intents
+     * Loads and displays the selected or captured image
+     */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == Activity.RESULT_OK) {
@@ -412,6 +463,11 @@ class AddExpenseActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Validates input fields and saves the expense to the database
+     * Updates an existing expense if in edit mode
+     * Creates a new expense if in add mode
+     */
     private fun saveExpense() {
         val amountText = etAmount.text.toString().trim()
         val description = etDescription.text.toString().trim()

@@ -26,9 +26,16 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Activity for viewing and filtering expenses by date range
+ * Displays expenses in a list with their details and totals the amount
+ */
 class ViewExpensesActivity : AppCompatActivity() {
 
+    // Tag for logging
     private val TAG = "ViewExpensesActivity"
+
+    // Database and UI components
     private lateinit var database: AppDatabase
     private lateinit var etStartDate: TextInputEditText
     private lateinit var etEndDate: TextInputEditText
@@ -38,6 +45,7 @@ class ViewExpensesActivity : AppCompatActivity() {
     private lateinit var btnBack: Button
     private lateinit var adapter: ExpenseAdapter
 
+    // Default date range - one month ago to current date
     private var startDate: Date = Calendar.getInstance().apply {
         add(Calendar.MONTH, -1) // Default to 1 month ago
         set(Calendar.HOUR_OF_DAY, 0)
@@ -51,9 +59,15 @@ class ViewExpensesActivity : AppCompatActivity() {
         set(Calendar.SECOND, 59)
     }.time
 
+    // Date formatter for user interface
     private val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
+    // Map to store category information by ID
     private var categoryMap: Map<Long, Category> = emptyMap()
 
+    /**
+     * Initialize the activity, set up UI components and event handlers
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_view_expenses)
@@ -71,24 +85,24 @@ class ViewExpensesActivity : AppCompatActivity() {
         rvExpenses = findViewById(R.id.rvExpenses)
         btnBack = findViewById(R.id.btnBack)
 
-        // Set up date fields
+        // Set up date fields with default values
         updateDateFields()
 
-        // Set up date pickers
+        // Set up date pickers for input fields
         etStartDate.setOnClickListener { showDatePicker(true) }
         etEndDate.setOnClickListener { showDatePicker(false) }
 
-        // Set up filter button
+        // Set up filter button to reload expenses with selected date range
         btnApplyFilter.setOnClickListener {
             loadExpenses()
         }
 
-        // Set up back button
+        // Set up back button to close activity
         btnBack.setOnClickListener {
             finish()
         }
 
-        // Set up RecyclerView
+        // Set up RecyclerView with adapter
         adapter = ExpenseAdapter(emptyList(), emptyMap(), ::onExpenseClick)
         rvExpenses.adapter = adapter
         rvExpenses.layoutManager = LinearLayoutManager(this)
@@ -99,11 +113,19 @@ class ViewExpensesActivity : AppCompatActivity() {
         Log.d(TAG, "onCreate completed")
     }
 
+    /**
+     * Updates date input fields with formatted dates
+     */
     private fun updateDateFields() {
         etStartDate.setText(dateFormatter.format(startDate))
         etEndDate.setText(dateFormatter.format(endDate))
     }
 
+    /**
+     * Shows date picker dialog for selecting start or end date
+     *
+     * @param isStartDate True if selecting start date, false if selecting end date
+     */
     private fun showDatePicker(isStartDate: Boolean) {
         val calendar = Calendar.getInstance()
         calendar.time = if (isStartDate) startDate else endDate
@@ -116,12 +138,14 @@ class ViewExpensesActivity : AppCompatActivity() {
                 calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
 
                 if (isStartDate) {
+                    // Set start date to beginning of day (00:00:00)
                     calendar.set(Calendar.HOUR_OF_DAY, 0)
                     calendar.set(Calendar.MINUTE, 0)
                     calendar.set(Calendar.SECOND, 0)
                     startDate = calendar.time
                     etStartDate.setText(dateFormatter.format(startDate))
                 } else {
+                    // Set end date to end of day (23:59:59)
                     calendar.set(Calendar.HOUR_OF_DAY, 23)
                     calendar.set(Calendar.MINUTE, 59)
                     calendar.set(Calendar.SECOND, 59)
@@ -136,6 +160,10 @@ class ViewExpensesActivity : AppCompatActivity() {
         datePickerDialog.show()
     }
 
+    /**
+     * Loads all categories from the database and creates a map for quick lookup
+     * Then loads expenses after categories are loaded
+     */
     private fun loadCategories() {
         Log.d(TAG, "Loading categories")
         lifecycleScope.launch {
@@ -152,6 +180,10 @@ class ViewExpensesActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Loads expenses from the database filtered by the current date range
+     * Updates the adapter with the loaded expenses and calculates the total
+     */
     private fun loadExpenses() {
         Log.d(TAG, "Loading expenses from $startDate to $endDate")
         lifecycleScope.launch {
@@ -160,8 +192,9 @@ class ViewExpensesActivity : AppCompatActivity() {
                     Log.d(TAG, "Expenses loaded: ${expenses.size}")
                     adapter.updateExpenses(expenses, categoryMap)
 
+                    // Calculate and display the total amount in Rand
                     val total = expenses.sumOf { it.amount }
-                    tvTotalExpenses.text = "Total: $${String.format("%.2f", total)}"
+                    tvTotalExpenses.text = "Total: R" + String.format("%.2f", total)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading expenses", e)
@@ -170,6 +203,12 @@ class ViewExpensesActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Handles click events on expense items
+     * Opens the ExpenseDetailActivity for the clicked expense
+     *
+     * @param expense The expense that was clicked
+     */
     private fun onExpenseClick(expense: Expense) {
         try {
             Log.d(TAG, "Expense clicked: ID=${expense.id}, amount=${expense.amount}, description=${expense.description}")
@@ -190,12 +229,25 @@ class ViewExpensesActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Custom adapter for displaying expenses in a RecyclerView
+     *
+     * @param expenses Initial list of expenses to display
+     * @param categoryMap Map of category IDs to Category objects
+     * @param onExpenseClick Callback function for expense item click events
+     */
     class ExpenseAdapter(
         private var expenses: List<Expense>,
         private var categoryMap: Map<Long, Category>,
         private val onExpenseClick: (Expense) -> Unit
     ) : RecyclerView.Adapter<ExpenseAdapter.ExpenseViewHolder>() {
 
+        /**
+         * Updates the adapter with new expense and category data
+         *
+         * @param newExpenses Updated list of expenses
+         * @param newCategoryMap Updated map of category IDs to Category objects
+         */
         fun updateExpenses(newExpenses: List<Expense>, newCategoryMap: Map<Long, Category>) {
             expenses = newExpenses
             categoryMap = newCategoryMap
@@ -215,6 +267,10 @@ class ViewExpensesActivity : AppCompatActivity() {
 
         override fun getItemCount(): Int = expenses.size
 
+        /**
+         * ViewHolder for expense items
+         * Binds expense data to the item view
+         */
         inner class ExpenseViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val amountTextView: TextView = itemView.findViewById(R.id.tvExpenseAmount)
             private val dateTextView: TextView = itemView.findViewById(R.id.tvExpenseDate)
@@ -222,8 +278,15 @@ class ViewExpensesActivity : AppCompatActivity() {
             private val categoryTextView: TextView = itemView.findViewById(R.id.tvExpenseCategory)
             private val photoIndicator: ImageView = itemView.findViewById(R.id.ivHasPhoto)
 
+            /**
+             * Binds expense data to the views
+             *
+             * @param expense The expense to display
+             * @param category The category associated with the expense
+             */
             fun bind(expense: Expense, category: Category?) {
-                amountTextView.text = "$${String.format("%.2f", expense.amount)}"
+                // Display amount in Rand with proper formatting
+                amountTextView.text = "R" + String.format("%.2f", expense.amount)
                 dateTextView.text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(expense.date)
                 descriptionTextView.text = expense.description
 
@@ -235,12 +298,14 @@ class ViewExpensesActivity : AppCompatActivity() {
                     categoryTextView.setBackgroundColor(android.graphics.Color.GRAY)
                 }
 
+                // Show photo indicator icon if the expense has a photo
                 if (!expense.photoPath.isNullOrEmpty()) {
                     photoIndicator.visibility = View.VISIBLE
                 } else {
                     photoIndicator.visibility = View.GONE
                 }
 
+                // Set click listener for the entire expense item
                 itemView.setOnClickListener {
                     onExpenseClick(expense)
                 }
