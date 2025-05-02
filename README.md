@@ -53,3 +53,4 @@ git clone https://github.com/your-repo/budget-buddy.git
 
 ## 📄 License
 This project is for educational purposes. Please contact the team before reuse.
+
