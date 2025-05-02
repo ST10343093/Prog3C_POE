@@ -1,3 +1,25 @@
+/*
+ --------------------------------Project Details----------------------------------
+ STUDENT NUMBERS: ST10343094        | ST10304100             | ST10248581    | ST10211919      | ST10295602
+ STUDENT NAMES: Arshad Shoaib Bhula | Jordan Wayne Gardiner  | 3.Troy Krause | Azania Mdletshe | Phineas Junior Kalambay
+ COURSE: BCAD Year 3
+ MODULE: Programming 3C
+ MODULE CODE: PROG7313
+ ASSESSMENT: Portfolio of Evidence (POE) Part 2
+ Github REPO LINK: https://github.com/ST10343093/Prog3C_POE
+ --------------------------------Project Details----------------------------------
+*/
+/*
+ --------------------------------Code Attribution----------------------------------
+ Title: Basic syntax | Kotlin Documentation
+ Author: Kotlin
+ Date Published: 06 November 2024
+ Date Accessed: 25 April 2025
+ Code Version: v21.20
+ Availability: https://kotlinlang.org/docs/basic-syntax.html
+  --------------------------------Code Attribution----------------------------------
+*/
+
 package vcmsa.projects.prog3c
 
 import android.app.Activity
@@ -37,6 +59,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+
 
 /**
  * Activity for adding new expenses or editing existing ones
