@@ -27,6 +27,7 @@ import android.app.DatePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -46,13 +47,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import vcmsa.projects.prog3c.data.AppDatabase
-import vcmsa.projects.prog3c.data.Category
-import vcmsa.projects.prog3c.data.Expense
+import kotlinx.coroutines.CancellationException
+import vcmsa.projects.prog3c.data.FirestoreRepository
+import vcmsa.projects.prog3c.data.FirestoreCategory
+import vcmsa.projects.prog3c.data.FirestoreExpense
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -60,15 +60,14 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-
 /**
  * Activity for adding new expenses or editing existing ones
  * Allows users to enter expense details, select categories, and attach receipt photos
  */
 class AddExpenseActivity : AppCompatActivity() {
 
-    // Database reference
-    private lateinit var database: AppDatabase
+    // Firestore repository reference
+    private lateinit var firestoreRepository: FirestoreRepository
 
     // UI elements
     private lateinit var etAmount: TextInputEditText
@@ -83,14 +82,14 @@ class AddExpenseActivity : AppCompatActivity() {
 
     // Data variables
     private var selectedDate: Date = Date()            // Currently selected date
-    private var selectedCategoryId: Long = -1          // Currently selected category ID
-    private var categories: List<Category> = emptyList() // List of available categories
+    private var selectedCategoryId: String = ""        // Currently selected category ID
+    private var categories: List<FirestoreCategory> = emptyList() // List of available categories
     private var currentPhotoPath: String? = null       // File path to stored photo
     private var photoUri: Uri? = null                  // URI reference to photo
 
     // Edit mode variables
     private var isEditMode = false                     // Whether we're editing existing expense
-    private var currentExpenseId: Long = -1            // ID of expense being edited
+    private var currentExpenseId: String = ""          // ID of expense being edited
 
     companion object {
         // Constants for activity result handling
@@ -104,8 +103,8 @@ class AddExpenseActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_expense)
 
-        // Initialize database
-        database = AppDatabase.getDatabase(this)
+        // Initialize Firestore repository
+        firestoreRepository = FirestoreRepository.getInstance()
 
         // Initialize views
         etAmount = findViewById(R.id.etExpenseAmount)
@@ -121,8 +120,8 @@ class AddExpenseActivity : AppCompatActivity() {
         // Check if we're in edit mode
         isEditMode = intent.getBooleanExtra("IS_EDIT", false)
         if (isEditMode) {
-            currentExpenseId = intent.getLongExtra("EXPENSE_ID", -1)
-            if (currentExpenseId != -1L) {
+            currentExpenseId = intent.getStringExtra("EXPENSE_ID") ?: "" // Now expects String, not Long
+            if (currentExpenseId.isNotEmpty()) {
                 // Change title and button text
                 findViewById<TextView>(R.id.tvAddExpenseTitle).text = "Edit Expense"
                 btnSaveExpense.text = "Update Expense"
@@ -199,62 +198,71 @@ class AddExpenseActivity : AppCompatActivity() {
     }
 
     /**
-     * Loads categories from the database and sets up the category spinner
+     * Loads categories from Firestore and sets up the category spinner
      * Exits the activity if no categories are available
      */
     private fun loadCategories() {
         lifecycleScope.launch {
-            categories = database.categoryDao().getAllCategories().first()
+            try {
+                categories = firestoreRepository.getAllCategories().first()
 
-            if (categories.isEmpty()) {
-                Toast.makeText(
+                if (categories.isEmpty()) {
+                    Toast.makeText(
+                        this@AddExpenseActivity,
+                        "Please add categories first",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    finish()
+                    return@launch
+                }
+
+                // Create adapter for spinner
+                val adapter = ArrayAdapter(
                     this@AddExpenseActivity,
-                    "Please add categories first",
-                    Toast.LENGTH_SHORT
-                ).show()
-                finish()
-                return@launch
-            }
+                    android.R.layout.simple_spinner_item,
+                    categories.map { it.name }
+                )
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                spinnerCategory.adapter = adapter
 
-            // Create adapter for spinner
-            val adapter = ArrayAdapter(
-                this@AddExpenseActivity,
-                android.R.layout.simple_spinner_item,
-                categories.map { it.name }
-            )
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            spinnerCategory.adapter = adapter
+                // Set default selection
+                selectedCategoryId = categories.first().id
 
-            // Set default selection
-            selectedCategoryId = categories.first().id
+                // Set listener for selection changes
+                spinnerCategory.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(
+                        parent: AdapterView<*>?,
+                        view: View?,
+                        position: Int,
+                        id: Long
+                    ) {
+                        selectedCategoryId = categories[position].id
+                    }
 
-            // Set listener for selection changes
-            spinnerCategory.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    selectedCategoryId = categories[position].id
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {
-                    // Do nothing
-                }
-            }
-
-            // If in edit mode and we have the category data now, reselect the appropriate category
-            if (isEditMode && currentExpenseId != -1L) {
-                val expense = withContext(Dispatchers.IO) {
-                    database.expenseDao().getExpenseById(currentExpenseId)
-                }
-                if (expense != null) {
-                    val categoryPosition = categories.indexOfFirst { it.id == expense.categoryId }
-                    if (categoryPosition >= 0) {
-                        spinnerCategory.setSelection(categoryPosition)
+                    override fun onNothingSelected(parent: AdapterView<*>?) {
+                        // Do nothing
                     }
                 }
+
+                // If in edit mode and we have the category data now, reselect the appropriate category
+                if (isEditMode && currentExpenseId.isNotEmpty()) {
+                    val expense = firestoreRepository.getExpenseById(currentExpenseId)
+                    if (expense != null) {
+                        val categoryPosition = categories.indexOfFirst { it.id == expense.categoryId }
+                        if (categoryPosition >= 0) {
+                            spinnerCategory.setSelection(categoryPosition)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Don't show error messages for cancellation (normal when leaving screen)
+                if (e is CancellationException) {
+                    Log.d(TAG, "Category loading cancelled (normal when leaving screen)")
+                    return@launch
+                }
+
+                Toast.makeText(this@AddExpenseActivity, "Error loading categories: ${e.message}", Toast.LENGTH_SHORT).show()
+                finish()
             }
         }
     }
@@ -264,54 +272,93 @@ class AddExpenseActivity : AppCompatActivity() {
      * Populates the form with the existing expense details
      * @param expenseId ID of the expense to edit
      */
-    private fun loadExpenseForEdit(expenseId: Long) {
+    private fun loadExpenseForEdit(expenseId: String) {
         lifecycleScope.launch {
-            val expense = withContext(Dispatchers.IO) {
-                database.expenseDao().getExpenseById(expenseId)
-            }
+            try {
+                val expense = firestoreRepository.getExpenseById(expenseId)
 
-            if (expense == null) {
-                Toast.makeText(this@AddExpenseActivity, "Expense not found", Toast.LENGTH_SHORT).show()
-                finish()
-                return@launch
-            }
+                if (expense == null) {
+                    Toast.makeText(this@AddExpenseActivity, "Expense not found", Toast.LENGTH_SHORT).show()
+                    finish()
+                    return@launch
+                }
 
-            // Fill the form with expense data
-            etAmount.setText(expense.amount.toString())
-            etDescription.setText(expense.description)
-            selectedDate = expense.date
-            updateDateText()
-            currentPhotoPath = expense.photoPath
+                // Fill the form with expense data
+                etAmount.setText(expense.amount.toString())
+                etDescription.setText(expense.description)
+                selectedDate = expense.getDate()
+                updateDateText()
+                currentPhotoPath = expense.photoPath
 
-            // Show photo if it exists
-            if (!expense.photoPath.isNullOrEmpty()) {
-                try {
-                    Log.d(TAG, "Loading photo from path: ${expense.photoPath}")
-                    ivReceiptPhoto.visibility = View.VISIBLE
+                // Show photo if it exists
+                if (!expense.photoPath.isNullOrEmpty()) {
+                    try {
+                        Log.d(TAG, "Loading photo from path: ${expense.photoPath}")
+                        ivReceiptPhoto.visibility = View.VISIBLE
 
-                    if (expense.photoPath!!.startsWith("content://")) {
-                        // It's a content URI
-                        photoUri = Uri.parse(expense.photoPath)
-                        ivReceiptPhoto.setImageURI(photoUri)
-                        Log.d(TAG, "Loaded image from content URI")
-                    } else {
-                        // It's a file path
-                        val photoFile = File(expense.photoPath!!)
-                        if (photoFile.exists()) {
-                            Log.d(TAG, "Photo file exists, loading bitmap")
-                            val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, Uri.fromFile(photoFile))
-                            ivReceiptPhoto.setImageBitmap(bitmap)
+                        if (expense.photoPath!!.startsWith("content://")) {
+                            // It's a content URI
+                            photoUri = Uri.parse(expense.photoPath)
+                            ivReceiptPhoto.setImageURI(photoUri)
+                            Log.d(TAG, "Loaded image from content URI")
                         } else {
-                            Log.e(TAG, "Photo file does not exist: ${expense.photoPath}")
+                            // It's a file path
+                            val photoFile = File(expense.photoPath!!)
+                            if (photoFile.exists()) {
+                                Log.d(TAG, "Photo file exists, loading bitmap")
+                                val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
+                                ivReceiptPhoto.setImageBitmap(bitmap)
+                            } else {
+                                Log.e(TAG, "Photo file does not exist: ${expense.photoPath}")
+                            }
                         }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error loading image", e)
+                        Toast.makeText(this@AddExpenseActivity, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error loading image", e)
-                    Toast.makeText(this@AddExpenseActivity, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+
+                // Category will be selected when the categories are loaded in loadCategories()
+            } catch (e: Exception) {
+                // Don't show error messages for cancellation (normal when leaving screen)
+                if (e is CancellationException) {
+                    Log.d(TAG, "Expense loading cancelled (normal when leaving screen)")
+                    return@launch
+                }
+
+                Toast.makeText(this@AddExpenseActivity, "Error loading expense: ${e.message}", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
+    }
+
+    /**
+     * Copies an image from a content URI to app's internal storage
+     * This prevents permission issues when accessing the image later
+     * @param sourceUri The content URI of the image to copy
+     * @return The file path of the copied image, or null if failed
+     */
+    private fun copyImageToAppStorage(sourceUri: Uri): String? {
+        try {
+            val fileName = "expense_${System.currentTimeMillis()}.jpg"
+            val storageDir = File(filesDir, "expense_images")
+            if (!storageDir.exists()) {
+                storageDir.mkdirs()
+            }
+
+            val destFile = File(storageDir, fileName)
+
+            contentResolver.openInputStream(sourceUri)?.use { input ->
+                destFile.outputStream().use { output ->
+                    input.copyTo(output)
                 }
             }
 
-            // Category will be selected when the categories are loaded in loadCategories()
+            Log.d(TAG, "Image copied to: ${destFile.absolutePath}")
+            return destFile.absolutePath
+        } catch (e: Exception) {
+            Log.e(TAG, "Error copying image to app storage", e)
+            return null
         }
     }
 
@@ -438,7 +485,7 @@ class AddExpenseActivity : AppCompatActivity() {
                     try {
                         if (currentPhotoPath != null) {
                             Log.d(TAG, "Loading camera image from: $currentPhotoPath")
-                            val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, Uri.fromFile(File(currentPhotoPath!!)))
+                            val bitmap = BitmapFactory.decodeFile(currentPhotoPath!!)
                             ivReceiptPhoto.setImageBitmap(bitmap)
                         } else if (photoUri != null) {
                             Log.d(TAG, "Loading camera image from URI: $photoUri")
@@ -451,31 +498,27 @@ class AddExpenseActivity : AppCompatActivity() {
                     }
                 }
                 REQUEST_GALLERY_IMAGE -> {
-                    // Handle gallery image selection
+                    // Handle gallery image selection - IMPROVED VERSION
                     data?.data?.let { uri ->
                         try {
                             Log.d(TAG, "Selected gallery image: $uri")
-                            photoUri = uri
 
-                            // Take persistent URI permission
-                            try {
-                                contentResolver.takePersistableUriPermission(
-                                    uri,
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                )
-                                Log.d(TAG, "Took persistent permission for URI")
-                            } catch (e: SecurityException) {
-                                Log.e(TAG, "Failed to take permission: ${e.message}")
-                                // Continue anyway, might still work
+                            // Copy the image to app's internal storage instead of relying on URI
+                            val copiedImagePath = copyImageToAppStorage(uri)
+
+                            if (copiedImagePath != null) {
+                                currentPhotoPath = copiedImagePath
+                                Log.d(TAG, "Image copied to app storage: $currentPhotoPath")
+
+                                // Show the image
+                                ivReceiptPhoto.visibility = View.VISIBLE
+                                val bitmap = BitmapFactory.decodeFile(copiedImagePath)
+                                ivReceiptPhoto.setImageBitmap(bitmap)
+
+                                Toast.makeText(this, "Image saved successfully", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show()
                             }
-
-                            // For gallery images, store the content URI directly
-                            currentPhotoPath = uri.toString()
-                            Log.d(TAG, "Setting currentPhotoPath to URI: $currentPhotoPath")
-
-                            // Show the image
-                            ivReceiptPhoto.visibility = View.VISIBLE
-                            ivReceiptPhoto.setImageURI(uri)
                         } catch (e: Exception) {
                             Log.e(TAG, "Error processing gallery image", e)
                             Toast.makeText(this, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -487,7 +530,7 @@ class AddExpenseActivity : AppCompatActivity() {
     }
 
     /**
-     * Validates input fields and saves the expense to the database
+     * Validates input fields and saves the expense to Firestore
      * Updates an existing expense if in edit mode
      * Creates a new expense if in add mode
      */
@@ -522,7 +565,7 @@ class AddExpenseActivity : AppCompatActivity() {
             return
         }
 
-        if (selectedCategoryId == -1L) {
+        if (selectedCategoryId.isEmpty()) {
             Toast.makeText(this, "Please select a category", Toast.LENGTH_SHORT).show()
             return
         }
@@ -532,37 +575,49 @@ class AddExpenseActivity : AppCompatActivity() {
 
         // Create expense object
         val expense = if (isEditMode) {
-            Expense(
+            FirestoreExpense(
                 id = currentExpenseId,
                 amount = amount,
                 description = description,
                 date = selectedDate,
                 categoryId = selectedCategoryId,
-                photoPath = currentPhotoPath
+                photoPath = currentPhotoPath,
+                userId = "" // Will be set by repository
             )
         } else {
-            Expense(
+            FirestoreExpense(
+                id = "",
                 amount = amount,
                 description = description,
                 date = selectedDate,
                 categoryId = selectedCategoryId,
-                photoPath = currentPhotoPath
+                photoPath = currentPhotoPath,
+                userId = "" // Will be set by repository
             )
         }
 
-        // Save expense to database
+        // Save expense to Firestore
         lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
+            try {
                 if (isEditMode) {
-                    database.expenseDao().updateExpense(expense)
+                    firestoreRepository.updateExpense(expense)
                 } else {
-                    database.expenseDao().insertExpense(expense)
+                    firestoreRepository.insertExpense(expense)
                 }
-            }
 
-            val message = if (isEditMode) "Expense updated" else "Expense saved"
-            Toast.makeText(this@AddExpenseActivity, message, Toast.LENGTH_SHORT).show()
-            finish()
+                val message = if (isEditMode) "Expense updated" else "Expense saved"
+                Toast.makeText(this@AddExpenseActivity, message, Toast.LENGTH_SHORT).show()
+                finish()
+            } catch (e: Exception) {
+                // Don't show error messages for cancellation (normal when leaving screen)
+                if (e is CancellationException) {
+                    Log.d(TAG, "Save expense cancelled (normal when leaving screen)")
+                    return@launch
+                }
+
+                Toast.makeText(this@AddExpenseActivity, "Error saving expense: ${e.message}", Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Error saving expense", e)
+            }
         }
     }
 }

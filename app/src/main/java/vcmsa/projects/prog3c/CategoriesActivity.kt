@@ -15,12 +15,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import vcmsa.projects.prog3c.data.AppDatabase
-import vcmsa.projects.prog3c.data.Category
+import kotlinx.coroutines.CancellationException
+import vcmsa.projects.prog3c.data.FirestoreRepository
+import vcmsa.projects.prog3c.data.FirestoreCategory
 import yuku.ambilwarna.AmbilWarnaDialog
 
 /**
@@ -30,8 +29,8 @@ import yuku.ambilwarna.AmbilWarnaDialog
  */
 class CategoriesActivity : AppCompatActivity() {
 
-    // Database reference
-    private lateinit var database: AppDatabase
+    // Firestore repository reference
+    private lateinit var firestoreRepository: FirestoreRepository
 
     // RecyclerView adapter for displaying categories
     private lateinit var adapter: CategoryAdapter
@@ -47,8 +46,8 @@ class CategoriesActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
 
-        // Initialize database
-        database = AppDatabase.getDatabase(this)
+        // Initialize Firestore repository
+        firestoreRepository = FirestoreRepository.getInstance()
 
         // Set up RecyclerView
         val recyclerView = findViewById<RecyclerView>(R.id.rvCategories)
@@ -75,20 +74,30 @@ class CategoriesActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val newCategory = Category(name = categoryName, color = selectedColor)
+            val newCategory = FirestoreCategory(
+                name = categoryName,
+                color = selectedColor
+            )
 
-            // Add category to database
+            // Add category to Firestore
             lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    database.categoryDao().insertCategory(newCategory)
-                }
-                // Clear input field
-                categoryNameInput.text?.clear()
-                // Reset color
-                selectedColor = Color.BLUE
-                colorPickerButton.setBackgroundColor(selectedColor)
+                try {
+                    firestoreRepository.insertCategory(newCategory)
+                    // Clear input field
+                    categoryNameInput.text?.clear()
+                    // Reset color
+                    selectedColor = Color.BLUE
+                    colorPickerButton.setBackgroundColor(selectedColor)
 
-                Toast.makeText(this@CategoriesActivity, "Category added", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@CategoriesActivity, "Category added", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    // Don't show error messages for cancellation (normal when leaving screen)
+                    if (e is CancellationException) {
+                        return@launch
+                    }
+
+                    Toast.makeText(this@CategoriesActivity, "Error adding category: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -98,7 +107,7 @@ class CategoriesActivity : AppCompatActivity() {
             finish() // This will close the current activity and return to the previous one
         }
 
-        // Load categories from database
+        // Load categories from Firestore
         loadCategories()
     }
 
@@ -112,13 +121,22 @@ class CategoriesActivity : AppCompatActivity() {
     }
 
     /**
-     * Loads categories from the database and updates the RecyclerView
+     * Loads categories from Firestore and updates the RecyclerView
      * Uses Flow to automatically update when data changes
      */
     private fun loadCategories() {
         lifecycleScope.launch {
-            database.categoryDao().getAllCategories().collectLatest { categories ->
-                adapter.updateCategories(categories)
+            try {
+                firestoreRepository.getAllCategories().collectLatest { categories ->
+                    adapter.updateCategories(categories)
+                }
+            } catch (e: Exception) {
+                // Don't show error messages for cancellation (normal when leaving screen)
+                if (e is CancellationException) {
+                    return@launch
+                }
+
+                Toast.makeText(this@CategoriesActivity, "Error loading categories: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -147,7 +165,7 @@ class CategoriesActivity : AppCompatActivity() {
      * Allows changing the name and color of the category
      * @param category The category to edit
      */
-    private fun editCategory(category: Category) {
+    private fun editCategory(category: FirestoreCategory) {
         // Inflate the dialog layout
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_category, null)
         val editText = dialogView.findViewById<TextInputEditText>(R.id.etEditCategoryName)
@@ -184,12 +202,19 @@ class CategoriesActivity : AppCompatActivity() {
                 if (updatedName.isNotEmpty()) {
                     val updatedCategory = category.copy(name = updatedName, color = newColor)
 
-                    // Update category in database
+                    // Update category in Firestore
                     lifecycleScope.launch {
-                        withContext(Dispatchers.IO) {
-                            database.categoryDao().updateCategory(updatedCategory)
+                        try {
+                            firestoreRepository.updateCategory(updatedCategory)
+                            Toast.makeText(this@CategoriesActivity, "Category updated", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            // Don't show error messages for cancellation (normal when leaving screen)
+                            if (e is CancellationException) {
+                                return@launch
+                            }
+
+                            Toast.makeText(this@CategoriesActivity, "Error updating category: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
-                        Toast.makeText(this@CategoriesActivity, "Category updated", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -204,18 +229,25 @@ class CategoriesActivity : AppCompatActivity() {
      * Warns the user that associated expenses will also be deleted
      * @param category The category to delete
      */
-    private fun deleteCategory(category: Category) {
+    private fun deleteCategory(category: FirestoreCategory) {
         // Show confirmation dialog
         AlertDialog.Builder(this)
             .setTitle("Delete Category")
             .setMessage("Are you sure you want to delete this category? All expenses in this category will also be deleted.")
             .setPositiveButton("Delete") { _, _ ->
-                // Delete category from database
+                // Delete category from Firestore
                 lifecycleScope.launch {
-                    withContext(Dispatchers.IO) {
-                        database.categoryDao().deleteCategory(category)
+                    try {
+                        firestoreRepository.deleteCategory(category.id)
+                        Toast.makeText(this@CategoriesActivity, "Category deleted", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        // Don't show error messages for cancellation (normal when leaving screen)
+                        if (e is CancellationException) {
+                            return@launch
+                        }
+
+                        Toast.makeText(this@CategoriesActivity, "Error deleting category: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
-                    Toast.makeText(this@CategoriesActivity, "Category deleted", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -229,16 +261,16 @@ class CategoriesActivity : AppCompatActivity() {
      * @param onDeleteClick Callback function when delete button is clicked
      */
     private class CategoryAdapter(
-        private var categories: List<Category>,
-        private val onEditClick: (Category) -> Unit,
-        private val onDeleteClick: (Category) -> Unit
+        private var categories: List<FirestoreCategory>,
+        private val onEditClick: (FirestoreCategory) -> Unit,
+        private val onDeleteClick: (FirestoreCategory) -> Unit
     ) : RecyclerView.Adapter<CategoryAdapter.CategoryViewHolder>() {
 
         /**
          * Updates the list of categories and refreshes the display
          * @param newCategories New list of categories to display
          */
-        fun updateCategories(newCategories: List<Category>) {
+        fun updateCategories(newCategories: List<FirestoreCategory>) {
             categories = newCategories
             notifyDataSetChanged()
         }
@@ -279,7 +311,7 @@ class CategoriesActivity : AppCompatActivity() {
              * Binds category data to the view elements and sets up click listeners
              * @param category The category to display
              */
-            fun bind(category: Category) {
+            fun bind(category: FirestoreCategory) {
                 nameTextView.text = category.name
                 colorView.setBackgroundColor(category.color)
 

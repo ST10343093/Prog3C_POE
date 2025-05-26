@@ -46,7 +46,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Edit Category"
             android:scaleType="fitCenter"
-            android:src="@drawable/ic_edit"
+            android:src="@drawable/ic_expense_edit"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btnDeleteCategory"
             app:layout_constraintTop_toTopOf="parent" />

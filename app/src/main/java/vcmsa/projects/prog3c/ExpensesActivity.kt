@@ -3,22 +3,26 @@ package vcmsa.projects.prog3c
 import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import vcmsa.projects.prog3c.data.AppDatabase
-import vcmsa.projects.prog3c.data.Category
-import vcmsa.projects.prog3c.data.Expense
+import kotlinx.coroutines.CancellationException
+import vcmsa.projects.prog3c.data.FirestoreRepository
+import vcmsa.projects.prog3c.data.FirestoreCategory
+import vcmsa.projects.prog3c.data.FirestoreExpense
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -30,14 +34,19 @@ import java.util.Locale
  */
 class ExpensesActivity : AppCompatActivity() {
 
-    // Database reference and UI components
-    private lateinit var database: AppDatabase
+    // Tag for logging
+    private val TAG = "ExpensesActivity"
+
+    // Firestore repository reference and UI components
+    private lateinit var firestoreRepository: FirestoreRepository
     private lateinit var etStartDate: TextInputEditText
     private lateinit var etEndDate: TextInputEditText
     private lateinit var btnApplyFilter: Button
+    private lateinit var btnClearFilter: Button
     private lateinit var tvTotalExpenses: TextView
     private lateinit var rvExpenses: RecyclerView
     private lateinit var btnBack: Button
+    private lateinit var fabAddExpense: ExtendedFloatingActionButton  // Added FAB
     private lateinit var adapter: ExpenseAdapter
 
     // Default date range - previous month to current date
@@ -58,7 +67,7 @@ class ExpensesActivity : AppCompatActivity() {
     private val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
     // Map to store category information by ID
-    private var categoryMap: Map<Long, Category> = emptyMap()
+    private var categoryMap: Map<String, FirestoreCategory> = emptyMap()
 
     /**
      * Initialize the activity, set up UI components and event handlers
@@ -67,8 +76,10 @@ class ExpensesActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_view_expenses)
 
-        // Initialize database
-        database = AppDatabase.getDatabase(this)
+        Log.d(TAG, "onCreate started")
+
+        // Initialize Firestore repository
+        firestoreRepository = FirestoreRepository.getInstance()
 
         // Initialize views
         etStartDate = findViewById(R.id.etStartDate)
@@ -77,6 +88,20 @@ class ExpensesActivity : AppCompatActivity() {
         tvTotalExpenses = findViewById(R.id.tvTotalExpenses)
         rvExpenses = findViewById(R.id.rvExpenses)
         btnBack = findViewById(R.id.btnBack)
+
+        // Initialize FAB - This was missing in your code
+        fabAddExpense = findViewById(R.id.fabAddExpense)
+
+        // Initialize clear filter button if it exists in your layout
+        try {
+            btnClearFilter = findViewById(R.id.btnClearFilter)
+            btnClearFilter?.setOnClickListener {
+                clearFilters()
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "Clear filter button not found in layout")
+            // Clear button doesn't exist in layout, that's okay
+        }
 
         // Set up date fields with default values
         updateDateFields()
@@ -95,6 +120,13 @@ class ExpensesActivity : AppCompatActivity() {
             finish()
         }
 
+        // **FIX: Set up FAB click listener to add new expense**
+        fabAddExpense.setOnClickListener {
+            Log.d(TAG, "FAB clicked - navigating to AddExpenseActivity")
+            val intent = Intent(this, AddExpenseActivity::class.java)
+            startActivity(intent)
+        }
+
         // Set up RecyclerView with custom adapter
         adapter = ExpenseAdapter(emptyList(), emptyMap(), ::onExpenseClick)
         rvExpenses.adapter = adapter
@@ -102,6 +134,31 @@ class ExpensesActivity : AppCompatActivity() {
 
         // Load initial data
         loadCategories()
+
+        Log.d(TAG, "onCreate completed")
+    }
+
+    /**
+     * Clears the date filters and reloads all expenses
+     */
+    private fun clearFilters() {
+        Log.d(TAG, "Clearing filters")
+        // Reset to default date range (last month to now)
+        startDate = Calendar.getInstance().apply {
+            add(Calendar.MONTH, -1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+        }.time
+
+        endDate = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+        }.time
+
+        updateDateFields()
+        loadExpenses()
     }
 
     /**
@@ -152,33 +209,59 @@ class ExpensesActivity : AppCompatActivity() {
     }
 
     /**
-     * Loads all categories from the database and creates a map for quick lookup
+     * Loads all categories from Firestore and creates a map for quick lookup
      * Then loads expenses after categories are loaded
      */
     private fun loadCategories() {
+        Log.d(TAG, "Loading categories")
         lifecycleScope.launch {
-            database.categoryDao().getAllCategories().collectLatest { categories ->
-                // Create a map of category ID to Category object for quick lookup
-                categoryMap = categories.associateBy { it.id }
-                // Load expenses after categories are loaded
-                loadExpenses()
+            try {
+                firestoreRepository.getAllCategories().collectLatest { categories ->
+                    // Create a map of category ID to Category object for quick lookup
+                    categoryMap = categories.associateBy { it.id }
+                    Log.d(TAG, "Categories loaded: ${categories.size}")
+                    // Load expenses after categories are loaded
+                    loadExpenses()
+                }
+            } catch (e: Exception) {
+                // Don't show error messages for cancellation (normal when leaving screen)
+                if (e is CancellationException) {
+                    Log.d(TAG, "Category loading cancelled (normal when leaving screen)")
+                    return@launch
+                }
+
+                Log.e(TAG, "Error loading categories", e)
+                Toast.makeText(this@ExpensesActivity, "Error loading categories", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     /**
-     * Loads expenses from the database filtered by the current date range
+     * Loads expenses from Firestore filtered by the current date range
      * Updates the adapter with the loaded expenses and calculates the total
      */
     private fun loadExpenses() {
+        Log.d(TAG, "Loading expenses from $startDate to $endDate")
         lifecycleScope.launch {
-            database.expenseDao().getExpensesByDateRange(startDate, endDate).collectLatest { expenses ->
-                // Update the adapter with the new expenses and category map
-                adapter.updateExpenses(expenses, categoryMap)
+            try {
+                firestoreRepository.getExpensesByDateRange(startDate, endDate).collectLatest { expenses ->
+                    Log.d(TAG, "Expenses loaded: ${expenses.size}")
+                    // Update the adapter with the new expenses and category map
+                    adapter.updateExpenses(expenses, categoryMap)
 
-                // Calculate and display the total amount
-                val total = expenses.sumOf { it.amount }
-                tvTotalExpenses.text = "Total: R${String.format("%.2f", total)}"
+                    // Calculate and display the total amount in Rand
+                    val total = expenses.sumOf { it.amount }
+                    tvTotalExpenses.text = "Total: R" + String.format("%.2f", total)
+                }
+            } catch (e: Exception) {
+                // Don't show error messages for cancellation (normal when leaving screen)
+                if (e is CancellationException) {
+                    Log.d(TAG, "Expense loading cancelled (normal when leaving screen)")
+                    return@launch
+                }
+
+                Log.e(TAG, "Error loading expenses", e)
+                Toast.makeText(this@ExpensesActivity, "Error loading expenses", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -189,11 +272,35 @@ class ExpensesActivity : AppCompatActivity() {
      *
      * @param expense The expense that was clicked
      */
-    private fun onExpenseClick(expense: Expense) {
-        // Open detail view for the expense
-        val intent = Intent(this, ExpenseDetailActivity::class.java)
-        intent.putExtra("EXPENSE_ID", expense.id)
-        startActivity(intent)
+    private fun onExpenseClick(expense: FirestoreExpense) {
+        try {
+            Log.d(TAG, "Expense clicked: ID=${expense.id}, amount=${expense.amount}, description=${expense.description}")
+
+            // Create intent with String ID (not Long)
+            val intent = Intent(this, ExpenseDetailActivity::class.java)
+            intent.putExtra("EXPENSE_ID", expense.id) // This is now a String, not Long
+
+            // Add flags to ensure proper navigation
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+            Log.d(TAG, "Starting ExpenseDetailActivity with expense ID: ${expense.id}")
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error opening expense details", e)
+            Toast.makeText(this, "Error opening expense details: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Refresh the expenses list when returning from AddExpenseActivity
+     */
+    override fun onResume() {
+        super.onResume()
+        Log.d(TAG, "onResume - refreshing expenses")
+        // Reload expenses to show any new additions
+        if (::firestoreRepository.isInitialized) {
+            loadExpenses()
+        }
     }
 
     /**
@@ -204,9 +311,9 @@ class ExpensesActivity : AppCompatActivity() {
      * @param onExpenseClick Callback function for expense item click events
      */
     class ExpenseAdapter(
-        private var expenses: List<Expense>,
-        private var categoryMap: Map<Long, Category>,
-        private val onExpenseClick: (Expense) -> Unit
+        private var expenses: List<FirestoreExpense>,
+        private var categoryMap: Map<String, FirestoreCategory>,
+        private val onExpenseClick: (FirestoreExpense) -> Unit
     ) : RecyclerView.Adapter<ExpenseAdapter.ExpenseViewHolder>() {
 
         /**
@@ -215,7 +322,7 @@ class ExpensesActivity : AppCompatActivity() {
          * @param newExpenses Updated list of expenses
          * @param newCategoryMap Updated map of category IDs to Category objects
          */
-        fun updateExpenses(newExpenses: List<Expense>, newCategoryMap: Map<Long, Category>) {
+        fun updateExpenses(newExpenses: List<FirestoreExpense>, newCategoryMap: Map<String, FirestoreCategory>) {
             expenses = newExpenses
             categoryMap = newCategoryMap
             notifyDataSetChanged()
@@ -251,9 +358,10 @@ class ExpensesActivity : AppCompatActivity() {
              * @param expense The expense to display
              * @param category The category associated with the expense
              */
-            fun bind(expense: Expense, category: Category?) {
-                amountTextView.text = "R${String.format("%.2f", expense.amount)}"
-                dateTextView.text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(expense.date)
+            fun bind(expense: FirestoreExpense, category: FirestoreCategory?) {
+                // Display amount in Rand with proper formatting
+                amountTextView.text = "R" + String.format("%.2f", expense.amount)
+                dateTextView.text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(expense.getDate())
                 descriptionTextView.text = expense.description
 
                 if (category != null) {
@@ -264,14 +372,14 @@ class ExpensesActivity : AppCompatActivity() {
                     categoryTextView.setBackgroundColor(android.graphics.Color.GRAY)
                 }
 
-                // Show photo indicator if expense has a photo
+                // Show photo indicator icon if the expense has a photo
                 if (!expense.photoPath.isNullOrEmpty()) {
                     photoIndicator.visibility = View.VISIBLE
                 } else {
                     photoIndicator.visibility = View.GONE
                 }
 
-                // Set click listener for the item view
+                // Set click listener for the entire expense item
                 itemView.setOnClickListener {
                     onExpenseClick(expense)
                 }

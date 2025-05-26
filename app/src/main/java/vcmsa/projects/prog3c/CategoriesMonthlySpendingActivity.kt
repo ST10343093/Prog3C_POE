@@ -2,11 +2,13 @@ package vcmsa.projects.prog3c
 
 import android.app.DatePickerDialog
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -15,8 +17,9 @@ import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
-import vcmsa.projects.prog3c.data.AppDatabase
-import vcmsa.projects.prog3c.data.Expense
+import vcmsa.projects.prog3c.data.FirestoreRepository
+import vcmsa.projects.prog3c.data.FirestoreExpense
+import vcmsa.projects.prog3c.data.FirestoreCategory
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -28,12 +31,15 @@ import java.util.Locale
  */
 class CategoriesMonthlySpendingActivity : AppCompatActivity() {
 
-    // Database instance for data access
-    private lateinit var database: AppDatabase
+    // Tag for logging
+    private val TAG = "CategoriesMonthlySpending"
+
+    // Firestore repository for data access
+    private lateinit var firestoreRepository: FirestoreRepository
 
     // Date range filter variables
-    private var startDate: Date? = Date()
-    private var endDate: Date? = Date()
+    private var startDate: Date? = null
+    private var endDate: Date? = null
 
     // UI component declarations
     private lateinit var btnBackFromCategories: Button
@@ -44,9 +50,6 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
     private lateinit var etStartDate: TextInputEditText
     private lateinit var etEndDate: TextInputEditText
 
-    // Storage for expense data
-    private var expenseList: List<Expense> = emptyList()
-
     /**
      * Initializes the activity, sets up UI components and event listeners
      */
@@ -55,8 +58,10 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_categories_monthly)
 
-        // Initialize Room database
-        database = AppDatabase.getDatabase(this)
+        Log.d(TAG, "onCreate started")
+
+        // Initialize Firestore repository
+        firestoreRepository = FirestoreRepository.getInstance()
 
         // Initialize UI components
         etStartDate = findViewById(R.id.etStartDate)
@@ -73,14 +78,17 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
 
         // Configure date pickers
         setupDatePicker()
+
+        // Set default dates (last 30 days)
+        setDefaultDates()
         updateDateText()
 
-        // Load initial data
+        // Load initial data (all categories)
         loadCategories()
 
         // Set up button click listeners
         btnClearFilter.setOnClickListener {
-            loadCategories()
+            clearFilters()
         }
         btnApplyFilter.setOnClickListener {
             filterCategories()
@@ -88,6 +96,30 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
         btnBackFromCategories.setOnClickListener {
             finish()
         }
+
+        Log.d(TAG, "onCreate completed")
+    }
+
+    /**
+     * Sets default date range to last 30 days
+     */
+    private fun setDefaultDates() {
+        val calendar = Calendar.getInstance()
+        endDate = calendar.time // Today
+
+        calendar.add(Calendar.DAY_OF_MONTH, -30) // 30 days ago
+        startDate = calendar.time
+    }
+
+    /**
+     * Clears date filters and shows all time data
+     */
+    private fun clearFilters() {
+        startDate = null
+        endDate = null
+        etStartDate.setText("")
+        etEndDate.setText("")
+        loadCategories() // Load all categories without date filter
     }
 
     /**
@@ -101,7 +133,12 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
             val datePickerDialog = DatePickerDialog(
                 this,
                 { _, year, month, dayOfMonth ->
-                    calendar.set(year, month, dayOfMonth)
+                    calendar.set(Calendar.YEAR, year)
+                    calendar.set(Calendar.MONTH, month)
+                    calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                    calendar.set(Calendar.HOUR_OF_DAY, 0)
+                    calendar.set(Calendar.MINUTE, 0)
+                    calendar.set(Calendar.SECOND, 0)
                     startDate = calendar.time
                     updateDateText()
                 },
@@ -119,7 +156,12 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
             val datePickerDialog = DatePickerDialog(
                 this,
                 { _, year, month, dayOfMonth ->
-                    calendar.set(year, month, dayOfMonth)
+                    calendar.set(Calendar.YEAR, year)
+                    calendar.set(Calendar.MONTH, month)
+                    calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                    calendar.set(Calendar.HOUR_OF_DAY, 23)
+                    calendar.set(Calendar.MINUTE, 59)
+                    calendar.set(Calendar.SECOND, 59)
                     endDate = calendar.time
                     updateDateText()
                 },
@@ -145,29 +187,45 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
      * Calculates the total spent in each category and displays the summaries
      */
     private fun loadCategories() {
+        Log.d(TAG, "Loading all categories (no date filter)")
         lifecycleScope.launch {
-            // Combine expenses and categories data flows
-            combine(
-                database.expenseDao().getAllExpenses(),
-                database.categoryDao().getAllCategories()
-            ) { expenses, categories ->
-                // Create a map of category ID to Category object
-                val categoryMap = categories.associateBy({ it.id }, { it })
+            try {
+                // Combine expenses and categories data flows from Firestore
+                combine(
+                    firestoreRepository.getAllExpenses(),
+                    firestoreRepository.getAllCategories()
+                ) { expenses, categories ->
+                    Log.d(TAG, "Received ${expenses.size} expenses and ${categories.size} categories")
 
-                // Group expenses by category ID and calculate totals
-                val summaries = expenses.groupBy { it.categoryId }.mapNotNull { (categoryId, expenseGroup) ->
-                    val category = categoryMap[categoryId] ?: return@mapNotNull null
-                    val total = expenseGroup.sumOf { it.amount }
-                    CategorySummaryAdapter.CategorySummary(
-                        name = category.name,
-                        totalSpent = total,
-                        color = category.color
-                    )
+                    // Create a map of category ID to Category object
+                    val categoryMap = categories.associateBy { it.id }
+
+                    // Group expenses by category ID and calculate totals
+                    val summaries = expenses.groupBy { it.categoryId }.mapNotNull { (categoryId, expenseGroup) ->
+                        val category = categoryMap[categoryId]
+                        if (category != null) {
+                            val total = expenseGroup.sumOf { it.amount }
+                            Log.d(TAG, "Category ${category.name}: R$total")
+                            CategorySummaryAdapter.CategorySummary(
+                                name = category.name,
+                                totalSpent = total,
+                                color = category.color
+                            )
+                        } else {
+                            Log.w(TAG, "Category not found for ID: $categoryId")
+                            null
+                        }
+                    }.sortedByDescending { it.totalSpent } // Sort by highest spending first
+
+                    summaries
+                }.collect { summaries ->
+                    Log.d(TAG, "Updating adapter with ${summaries.size} summaries")
+                    // Update the RecyclerView with the new data
+                    adapter.submitList(summaries)
                 }
-                summaries
-            }.collect { summaries ->
-                // Update the RecyclerView with the new data
-                adapter.submitList(summaries)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading categories", e)
+                Toast.makeText(this@CategoriesMonthlySpendingActivity, "Error loading data: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -179,31 +237,49 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
     private fun filterCategories() {
         val start = startDate
         val end = endDate
-        if (start == null || end == null) return
+
+        if (start == null || end == null) {
+            Toast.makeText(this, "Please select both start and end dates", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Log.d(TAG, "Filtering categories from $start to $end")
 
         lifecycleScope.launch {
-            combine(
-                database.expenseDao().getAllExpenses(),
-                database.categoryDao().getAllCategories()
-            ) { expenses, categories ->
-                val categoryMap = categories.associateBy({ it.id }, { it })
+            try {
+                combine(
+                    firestoreRepository.getExpensesByDateRange(start, end),
+                    firestoreRepository.getAllCategories()
+                ) { expenses, categories ->
+                    Log.d(TAG, "Filtered ${expenses.size} expenses and ${categories.size} categories")
 
-                // Filter expenses within the selected date range
-                val filtered = expenses.filter { it.date in start..end }
+                    val categoryMap = categories.associateBy { it.id }
 
-                // Group filtered expenses by category
-                val summaries = filtered.groupBy { it.categoryId }.mapNotNull { (categoryId, expenseGroup) ->
-                    val category = categoryMap[categoryId] ?: return@mapNotNull null
-                    val total = expenseGroup.sumOf { it.amount }
-                    CategorySummaryAdapter.CategorySummary(
-                        name = category.name,
-                        totalSpent = total,
-                        color = category.color
-                    )
+                    // Group filtered expenses by category
+                    val summaries = expenses.groupBy { it.categoryId }.mapNotNull { (categoryId, expenseGroup) ->
+                        val category = categoryMap[categoryId]
+                        if (category != null) {
+                            val total = expenseGroup.sumOf { it.amount }
+                            Log.d(TAG, "Filtered - Category ${category.name}: R$total")
+                            CategorySummaryAdapter.CategorySummary(
+                                name = category.name,
+                                totalSpent = total,
+                                color = category.color
+                            )
+                        } else {
+                            Log.w(TAG, "Category not found for ID: $categoryId")
+                            null
+                        }
+                    }.sortedByDescending { it.totalSpent } // Sort by highest spending first
+
+                    summaries
+                }.collect { summaries ->
+                    Log.d(TAG, "Updating adapter with ${summaries.size} filtered summaries")
+                    adapter.submitList(summaries)
                 }
-                summaries
-            }.collect { summaries ->
-                adapter.submitList(summaries)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error filtering categories", e)
+                Toast.makeText(this@CategoriesMonthlySpendingActivity, "Error filtering data: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -218,7 +294,11 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
         /**
          * Data class representing a category spending summary
          */
-        data class CategorySummary(val name: String, val totalSpent: Double, val color: Int)
+        data class CategorySummary(
+            val name: String,
+            val totalSpent: Double,
+            val color: Int
+        )
 
         /**
          * ViewHolder for category summary items

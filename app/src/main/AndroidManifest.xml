@@ -25,6 +25,11 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Camera feature - not required, app works without camera -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -80,11 +85,7 @@
         <activity
             android:name=".AddExpenseActivity"
             android:exported="false" />
-        <!-- Added missing ViewExpensesActivity -->
-        <activity
-            android:name=".ViewExpensesActivity"
-            android:exported="false" />
-        <!-- Added missing ExpenseDetailActivity with launchMode -->
+        <!-- Expense detail view and editing -->
         <activity
             android:name=".ExpenseDetailActivity"
             android:exported="false"

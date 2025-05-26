@@ -22,43 +22,23 @@
 
 package vcmsa.projects.prog3c
 
-
-import android.app.Activity
 import android.app.DatePickerDialog
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
-import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.Spinner
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import vcmsa.projects.prog3c.data.AppDatabase
-import vcmsa.projects.prog3c.data.Budget
-import vcmsa.projects.prog3c.data.Category
-import vcmsa.projects.prog3c.data.Expense
-import java.io.File
-import java.io.IOException
+import vcmsa.projects.prog3c.data.FirestoreRepository
+import vcmsa.projects.prog3c.data.FirestoreCategory
+import vcmsa.projects.prog3c.data.FirestoreBudget
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -71,8 +51,8 @@ import java.util.Locale
  */
 class BudgetActivity : AppCompatActivity() {
 
-    // Database reference
-    private lateinit var database: AppDatabase
+    // Firestore repository reference
+    private lateinit var firestoreRepository: FirestoreRepository
 
     // UI elements
     private lateinit var etMinimumGoal: TextInputEditText
@@ -86,16 +66,16 @@ class BudgetActivity : AppCompatActivity() {
     // Data variables
     private var startDate: Date = Date()                // Budget period start date
     private var endDate: Date = Date()                  // Budget period end date
-    private var selectedCategoryId: Long = -1          // Currently selected category ID
-    private var categories: List<Category> = emptyList() // List of available categories
+    private var selectedCategoryId: String = ""         // Currently selected category ID
+    private var categories: List<FirestoreCategory> = emptyList() // List of available categories
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_budget)
 
-        // Initialize database
-        database = AppDatabase.getDatabase(this)
+        // Initialize Firestore repository
+        firestoreRepository = FirestoreRepository.getInstance()
 
         // Initialize views
         etMinimumGoal = findViewById(R.id.etMinimumGoal)
@@ -182,55 +162,60 @@ class BudgetActivity : AppCompatActivity() {
     }
 
     /**
-     * Loads categories from the database and sets up the category spinner
+     * Loads categories from Firestore and sets up the category spinner
      * Exits the activity if no categories are available
      */
     private fun loadCategories() {
         lifecycleScope.launch {
-            categories = database.categoryDao().getAllCategories().first()
+            try {
+                categories = firestoreRepository.getAllCategories().first()
 
-            if (categories.isEmpty()) {
-                Toast.makeText(
+                if (categories.isEmpty()) {
+                    Toast.makeText(
+                        this@BudgetActivity,
+                        "Please add categories first",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    finish()
+                    return@launch
+                }
+
+                // Create adapter for spinner
+                val adapter = ArrayAdapter(
                     this@BudgetActivity,
-                    "Please add categories first",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    android.R.layout.simple_spinner_item,
+                    categories.map { it.name }
+                )
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                spinnerCategory.adapter = adapter
+
+                // Set default selection
+                selectedCategoryId = categories.first().id
+
+                // Set listener for selection changes
+                spinnerCategory.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(
+                        parent: AdapterView<*>?,
+                        view: View?,
+                        position: Int,
+                        id: Long
+                    ) {
+                        selectedCategoryId = categories[position].id
+                    }
+
+                    override fun onNothingSelected(parent: AdapterView<*>?) {
+                        // Do nothing
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@BudgetActivity, "Error loading categories: ${e.message}", Toast.LENGTH_SHORT).show()
                 finish()
-                return@launch
-            }
-
-            // Create adapter for spinner
-            val adapter = ArrayAdapter(
-                this@BudgetActivity,
-                android.R.layout.simple_spinner_item,
-                categories.map { it.name }
-            )
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            spinnerCategory.adapter = adapter
-
-            // Set default selection
-            selectedCategoryId = categories.first().id
-
-            // Set listener for selection changes
-            spinnerCategory.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    selectedCategoryId = categories[position].id
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {
-                    // Do nothing
-                }
             }
         }
     }
 
     /**
-     * Validates input fields and saves the budget to the database
+     * Validates input fields and saves the budget to Firestore
      * Creates a new budget with target spending limits for the selected category
      */
     private fun saveBudget() {
@@ -266,43 +251,54 @@ class BudgetActivity : AppCompatActivity() {
             return
         }
 
-        if (minAmount<= 0) {
+        if (minAmount <= 0) {
             etMinimumGoal.error = "Amount must be greater than zero"
             etMinimumGoal.requestFocus()
             return
         }
 
-        if (maxAmount<= 0) {
-            etMinimumGoal.error = "Amount must be greater than zero"
-            etMinimumGoal.requestFocus()
+        if (maxAmount <= 0) {
+            etMaximumGoal.error = "Amount must be greater than zero"
+            etMaximumGoal.requestFocus()
             return
         }
 
-        if (selectedCategoryId == -1L) {
+        if (maxAmount <= minAmount) {
+            etMaximumGoal.error = "Maximum amount must be greater than minimum amount"
+            etMaximumGoal.requestFocus()
+            return
+        }
+
+        if (selectedCategoryId.isEmpty()) {
             Toast.makeText(this, "Please select a category", Toast.LENGTH_SHORT).show()
             return
         }
 
+        if (endDate.before(startDate)) {
+            Toast.makeText(this, "End date must be after start date", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         // Create budget object
-        val budget =
-            Budget(
-                minimumAmount = minAmount,
-                maximumAmount = maxAmount,
-                categoryId = selectedCategoryId,
-                startDate = startDate,
-                endDate = endDate
-            )
+        val budget = FirestoreBudget(
+            id = "",
+            minimumAmount = minAmount,
+            maximumAmount = maxAmount,
+            categoryId = selectedCategoryId,
+            startDate = startDate,
+            endDate = endDate,
+            userId = "" // Will be set by repository
+        )
 
-
-        // Save expense to database
+        // Save budget to Firestore
         lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                database.budgetDao().insertBudget(budget)
+            try {
+                firestoreRepository.insertBudget(budget)
+                Toast.makeText(this@BudgetActivity, "Budget saved", Toast.LENGTH_SHORT).show()
+                finish()
+            } catch (e: Exception) {
+                Toast.makeText(this@BudgetActivity, "Error saving budget: ${e.message}", Toast.LENGTH_SHORT).show()
             }
-
-            val message = "Budget saved"
-            Toast.makeText(this@BudgetActivity, message, Toast.LENGTH_SHORT).show()
-            finish()
         }
     }
 }
