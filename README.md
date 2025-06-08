@@ -207,7 +207,7 @@
   <table>
     <tr>
       <td align="center"><a href="https://github.com/ST10304100"><img src="https://github.com/identicons/ST10304100.png" width="100px" alt="Jordan Wayne Gardiner"/><br /><b>Jordan Wayne Gardiner</b></a><br />ST10304100<br /><i>UI/UX Design & Analytics</i></td>
-      <td align="center"><a href="https://github.com/phineaskalambay"><img src="https://github.com/identicons/phineaskalambay.png" width="100px" alt="Phineas Kalambay"/><br /><b>Phineas Junior Kalambay</b></a><br />ST10295602<br /><i>Firebase Architecture</i></td>
+      <td align="center"><a href="https://github.com/iamphineas"><img src="https://github.com/identicons/iamphineas.png" width="100px" alt="Phineas Kalambay"/><br /><b>Phineas Junior Kalambay</b></a><br />ST10295602<br /><i>Firebase Architecture</i></td>
       <td align="center"><a href="https://github.com/AzaniaM"><img src="https://github.com/identicons/AzaniaM.png" width="100px" alt="Azania Mdletshe"/><br /><b>Azania Mdletshe</b></a><br />ST10211919<br /><i>Cloud Security & Auth</i></td>
     </tr>
     <tr>
