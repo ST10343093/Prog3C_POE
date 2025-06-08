@@ -12,10 +12,12 @@ import android.widget.TextView
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import vcmsa.projects.prog3c.utils.NavigationHelper
 
 /**
  * Activity for new user registration
  * Handles creation of new accounts with email and password
+ * Now includes smart navigation integration
  */
 class RegisterActivity : AppCompatActivity() {
 
@@ -23,7 +25,7 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
 
     /**
-     * Initialize the activity, set up UI components and validation logic
+     * Initialize the activity, set up UI components and validation logic with smart navigation
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,18 +86,16 @@ class RegisterActivity : AppCompatActivity() {
             registerUser(email, password)
         }
 
-        // Set up login prompt for existing users
+        // Set up login prompt for existing users with smart navigation
         loginPrompt.setOnClickListener {
-            // Navigate to LoginActivity
-            val intent = Intent(this, LoginActivity::class.java)
-            startActivity(intent)
+            NavigationHelper.navigateToActivity(this, LoginActivity::class.java)
             finish()
         }
     }
 
     /**
      * Creates a new user account with Firebase Authentication
-     * Handles success and various error conditions with specific messages
+     * Handles success and various error conditions with specific messages and smart navigation
      *
      * @param email New user's email address
      * @param password New user's password
@@ -107,11 +107,8 @@ class RegisterActivity : AppCompatActivity() {
                     // Account creation successful
                     Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show()
 
-                    // Navigate to MainActivity and clear back stack
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    finish()
+                    // Navigate to MainActivity using smart navigation
+                    NavigationHelper.navigateToAuthenticatedFlow(this)
                 } else {
                     // Handle specific registration errors with helpful messages
                     val exception = task.exception
@@ -132,5 +129,12 @@ class RegisterActivity : AppCompatActivity() {
                     Log.e("RegisterActivity", "Registration failed", exception)
                 }
             }
+    }
+
+    /**
+     * Handle back button press with smart navigation
+     */
+    override fun onBackPressed() {
+        NavigationHelper.navigateBack(this)
     }
 }

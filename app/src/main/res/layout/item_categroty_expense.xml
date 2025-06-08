@@ -6,56 +6,72 @@
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
     android:elevation="4dp"
-    android:padding="48dp"
-    app:cardCornerRadius="8dp"
+    app:cardCornerRadius="12dp"
     app:cardBackgroundColor="@android:color/white">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="24dp">
-        <ImageView
-            android:id="@+id/imagePhoto"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:layout_marginEnd="12dp"
-            android:scaleType="centerCrop"
-            android:visibility="gone" />
+        android:padding="16dp"
+        android:minHeight="56dp">
 
-        <LinearLayout
+        <!-- Category Color Indicator -->
+        <View
+            android:id="@+id/viewCategoryColor"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:background="@android:color/holo_blue_light"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Category Name -->
+        <TextView
+            android:id="@+id/textCategoryName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="horizontal">
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:text="Category Name"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:textColor="@android:color/black"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:gravity="center_vertical"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/viewCategoryColor"
+            app:layout_constraintEnd_toStartOf="@id/textAmount"
+            app:layout_constraintHorizontal_bias="0" />
 
-            <View
-                android:id="@+id/viewCategoryColor"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_margin="16dp"
-                android:background="@android:color/holo_blue_light"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+        <!-- Amount -->
+        <TextView
+            android:id="@+id/textAmount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="R0.00"
+            android:textColor="#388E3C"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:minWidth="80dp"
+            android:gravity="end|center_vertical"
+            android:maxLines="1"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="1" />
 
-            <TextView
-                android:id="@+id/textCategoryName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Category Name"
-                android:textStyle="bold"
-                android:layout_margin="16dp"
-                android:textSize="16sp" />
+        <!-- Hidden photo view (keeping for compatibility with existing code) -->
+        <ImageView
+            android:id="@+id/imagePhoto"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
-            <TextView
-                android:id="@+id/textAmount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="R0.00"
-                android:textColor="#388E3C"
-                android:layout_margin="16dp"
-                android:textSize="14sp" />
-        </LinearLayout>
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 </androidx.cardview.widget.CardView>

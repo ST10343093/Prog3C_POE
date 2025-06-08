@@ -40,6 +40,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Prog3C"
         tools:targetApi="31">
+
+        <!-- NEW: In My Pocket Activity -->
+        <activity
+            android:name=".InMyPocketActivity"
+            android:exported="false" />
+
+        <!-- NEW: Spending Breakdown Activity -->
+        <activity
+            android:name=".SpendingBreakdownActivity"
+            android:exported="false" />
+
         <!-- Activity for viewing monthly spending by category -->
         <activity
             android:name=".CategoriesMonthlySpendingActivity"

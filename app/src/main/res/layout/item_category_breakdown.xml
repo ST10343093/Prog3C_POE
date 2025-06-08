@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="@android:color/white">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:minHeight="64dp">
+
+        <!-- Category Color Indicator -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardColorIndicator"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="2dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <View
+                android:id="@+id/viewCategoryColor"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/holo_blue_light" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Category Name -->
+        <TextView
+            android:id="@+id/tvCategoryName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
+            android:text="Category Name"
+            android:textColor="@android:color/black"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintStart_toEndOf="@id/cardColorIndicator"
+            app:layout_constraintEnd_toStartOf="@id/llAmountSection"
+            app:layout_constraintTop_toTopOf="@id/cardColorIndicator"
+            app:layout_constraintBottom_toBottomOf="@id/cardColorIndicator"
+            tools:text="Groceries" />
+
+        <!-- Amount and Percentage Section -->
+        <LinearLayout
+            android:id="@+id/llAmountSection"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="end"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/cardColorIndicator"
+            app:layout_constraintBottom_toBottomOf="@id/cardColorIndicator">
+
+            <!-- Amount -->
+            <TextView
+                android:id="@+id/tvCategoryAmount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="R450.00"
+                android:textColor="@color/expense_red"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:gravity="end"
+                tools:text="R450.00" />
+
+            <!-- Percentage -->
+            <TextView
+                android:id="@+id/tvCategoryPercentage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="25.5%"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:gravity="end"
+                tools:text="25.5%" />
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

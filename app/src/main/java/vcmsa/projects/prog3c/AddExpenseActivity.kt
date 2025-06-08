@@ -1,25 +1,3 @@
-/*
- --------------------------------Project Details----------------------------------
- STUDENT NUMBERS: ST10343094        | ST10304100             | ST10248581    | ST10211919      | ST10295602
- STUDENT NAMES: Arshad Shoaib Bhula | Jordan Wayne Gardiner  | 3.Troy Krause | Azania Mdletshe | Phineas Junior Kalambay
- COURSE: BCAD Year 3
- MODULE: Programming 3C
- MODULE CODE: PROG7313
- ASSESSMENT: Portfolio of Evidence (POE) Part 2
- Github REPO LINK: https://github.com/ST10343093/Prog3C_POE
- --------------------------------Project Details----------------------------------
-*/
-/*
- --------------------------------Code Attribution----------------------------------
- Title: Basic syntax | Kotlin Documentation
- Author: Kotlin
- Date Published: 06 November 2024
- Date Accessed: 25 April 2025
- Code Version: v21.20
- Availability: https://kotlinlang.org/docs/basic-syntax.html
-  --------------------------------Code Attribution----------------------------------
-*/
-
 package vcmsa.projects.prog3c
 
 import android.app.Activity
@@ -53,6 +31,7 @@ import kotlinx.coroutines.CancellationException
 import vcmsa.projects.prog3c.data.FirestoreRepository
 import vcmsa.projects.prog3c.data.FirestoreCategory
 import vcmsa.projects.prog3c.data.FirestoreExpense
+import vcmsa.projects.prog3c.utils.NavigationHelper
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -63,6 +42,7 @@ import java.util.Locale
 /**
  * Activity for adding new expenses or editing existing ones
  * Allows users to enter expense details, select categories, and attach receipt photos
+ * Now includes smart navigation integration
  */
 class AddExpenseActivity : AppCompatActivity() {
 
@@ -120,7 +100,7 @@ class AddExpenseActivity : AppCompatActivity() {
         // Check if we're in edit mode
         isEditMode = intent.getBooleanExtra("IS_EDIT", false)
         if (isEditMode) {
-            currentExpenseId = intent.getStringExtra("EXPENSE_ID") ?: "" // Now expects String, not Long
+            currentExpenseId = intent.getStringExtra("EXPENSE_ID") ?: ""
             if (currentExpenseId.isNotEmpty()) {
                 // Change title and button text
                 findViewById<TextView>(R.id.tvAddExpenseTitle).text = "Edit Expense"
@@ -152,9 +132,9 @@ class AddExpenseActivity : AppCompatActivity() {
             openGallery()
         }
 
-        // Set up back button
+        // Set up back button with smart navigation
         btnBackFromExpense.setOnClickListener {
-            finish() // This will close the current activity and return to the previous one
+            NavigationHelper.navigateBack(this)
         }
 
         // Set up save button
@@ -199,7 +179,7 @@ class AddExpenseActivity : AppCompatActivity() {
 
     /**
      * Loads categories from Firestore and sets up the category spinner
-     * Exits the activity if no categories are available
+     * Provides smart navigation to categories if none exist
      */
     private fun loadCategories() {
         lifecycleScope.launch {
@@ -209,9 +189,11 @@ class AddExpenseActivity : AppCompatActivity() {
                 if (categories.isEmpty()) {
                     Toast.makeText(
                         this@AddExpenseActivity,
-                        "Please add categories first",
-                        Toast.LENGTH_SHORT
+                        "No categories found. Let's create some first!",
+                        Toast.LENGTH_LONG
                     ).show()
+                    // Smart navigation to categories with context
+                    NavigationHelper.navigateToCategories(this@AddExpenseActivity, fromExpenseFlow = true)
                     finish()
                     return@launch
                 }
@@ -262,7 +244,7 @@ class AddExpenseActivity : AppCompatActivity() {
                 }
 
                 Toast.makeText(this@AddExpenseActivity, "Error loading categories: ${e.message}", Toast.LENGTH_SHORT).show()
-                finish()
+                NavigationHelper.navigateBack(this@AddExpenseActivity)
             }
         }
     }
@@ -279,7 +261,7 @@ class AddExpenseActivity : AppCompatActivity() {
 
                 if (expense == null) {
                     Toast.makeText(this@AddExpenseActivity, "Expense not found", Toast.LENGTH_SHORT).show()
-                    finish()
+                    NavigationHelper.navigateBack(this@AddExpenseActivity)
                     return@launch
                 }
 
@@ -327,7 +309,7 @@ class AddExpenseActivity : AppCompatActivity() {
                 }
 
                 Toast.makeText(this@AddExpenseActivity, "Error loading expense: ${e.message}", Toast.LENGTH_SHORT).show()
-                finish()
+                NavigationHelper.navigateBack(this@AddExpenseActivity)
             }
         }
     }
@@ -533,6 +515,7 @@ class AddExpenseActivity : AppCompatActivity() {
      * Validates input fields and saves the expense to Firestore
      * Updates an existing expense if in edit mode
      * Creates a new expense if in add mode
+     * Provides smart navigation after successful save
      */
     private fun saveExpense() {
         val amountText = etAmount.text.toString().trim()
@@ -607,7 +590,9 @@ class AddExpenseActivity : AppCompatActivity() {
 
                 val message = if (isEditMode) "Expense updated" else "Expense saved"
                 Toast.makeText(this@AddExpenseActivity, message, Toast.LENGTH_SHORT).show()
-                finish()
+
+                // Smart navigation back after successful save
+                NavigationHelper.navigateBack(this@AddExpenseActivity)
             } catch (e: Exception) {
                 // Don't show error messages for cancellation (normal when leaving screen)
                 if (e is CancellationException) {
@@ -619,5 +604,12 @@ class AddExpenseActivity : AppCompatActivity() {
                 Log.e(TAG, "Error saving expense", e)
             }
         }
+    }
+
+    /**
+     * Handle back button press with smart navigation
+     */
+    override fun onBackPressed() {
+        NavigationHelper.navigateBack(this)
     }
 }

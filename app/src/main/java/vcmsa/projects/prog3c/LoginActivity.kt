@@ -11,10 +11,12 @@ import android.widget.EditText
 import android.widget.TextView
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import vcmsa.projects.prog3c.utils.NavigationHelper
 
 /**
  * Activity for user authentication
  * Handles user login and provides navigation to registration screen
+ * Now includes smart navigation integration
  */
 class LoginActivity : AppCompatActivity() {
 
@@ -22,7 +24,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
 
     /**
-     * Initializes the activity, sets up UI components and event listeners
+     * Initializes the activity, sets up UI components and event listeners with smart navigation
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,17 +62,15 @@ class LoginActivity : AppCompatActivity() {
             loginUser(email, password)
         }
 
-        // Set up register prompt to navigate to registration screen
+        // Set up register prompt to navigate to registration screen with smart navigation
         registerPrompt.setOnClickListener {
-            // Navigate to RegisterActivity
-            val intent = Intent(this, RegisterActivity::class.java)
-            startActivity(intent)
+            NavigationHelper.navigateToActivity(this, RegisterActivity::class.java)
         }
     }
 
     /**
      * Authenticates user with Firebase using email and password
-     * Handles login success and various error conditions
+     * Handles login success and various error conditions with smart navigation
      *
      * @param email User's email address
      * @param password User's password
@@ -82,11 +82,8 @@ class LoginActivity : AppCompatActivity() {
                     // Authentication successful, show success message
                     Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show()
 
-                    // Navigate to MainActivity and clear back stack
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    finish()
+                    // Navigate to MainActivity using smart navigation
+                    NavigationHelper.navigateToAuthenticatedFlow(this)
                 } else {
                     // Determine the specific authentication error
                     val exception = task.exception
@@ -105,5 +102,12 @@ class LoginActivity : AppCompatActivity() {
                     Log.e("LoginActivity", "Login failed", exception)
                 }
             }
+    }
+
+    /**
+     * Handle back button press with smart navigation
+     */
+    override fun onBackPressed() {
+        NavigationHelper.navigateBack(this)
     }
 }

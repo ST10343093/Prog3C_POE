@@ -1,237 +1,412 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+ ================================Project Details================================
+ STUDENT NUMBERS: ST10343094        | ST10304100             | ST10248581    | ST10211919      | ST10295602
+ STUDENT NAMES: Arshad Shoaib Bhula | Jordan Wayne Gardiner  | 3.Troy Krause | Azania Mdletshe | Phineas Junior Kalambay
+ COURSE: BCAD Year 3
+ MODULE: Programming 3C
+ MODULE CODE: PROG7313
+ ASSESSMENT: Portfolio of Evidence (POE) Part 2
+ Github REPO LINK: https://github.com/ST10343093/Prog3C_POE
+ ================================Project Details================================
+
+ ================================Code Attribution================================
+ Title: Basic syntax | Kotlin Documentation
+ Author: Kotlin
+ Date Published: 06 November 2024
+ Date Accessed: 25 April 2025
+ Code Version: v21.20
+ Availability: https://kotlinlang.org/docs/basic-syntax.html
+ ================================Code Attribution================================
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:background="@drawable/background_add_expense"
-    tools:context=".AddExpenseActivity">
+    android:background="@color/background_primary"
+    tools:context=".BudgetActivity">
 
-    <LinearLayout
+    <!-- Modern App Bar with Gradient Background -->
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:paddingVertical="32dp"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="24dp">
+        android:layout_height="wrap_content"
+        android:background="@drawable/gradient_header"
+        app:elevation="0dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="160dp"
+            android:padding="24dp"
+            android:paddingTop="16dp">
 
+            <!-- Back Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBackFromBudget"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="8dp"
+                android:text="Back"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                app:icon="@drawable/ic_back"
+                app:iconGravity="textStart"
+                app:iconSize="18dp"
+                app:iconTint="@color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- Title -->
             <TextView
                 android:id="@+id/tvAddBudgetTitle"
-                style="@style/TextAppearance.MaterialComponents.Headline6"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Add New Budget"
-                android:textSize="24sp"
-                android:textColor="@color/white"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="0.5" />
-
-            <LinearLayout
-                android:id="@+id/llGoals"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="32dp"
-                android:gravity="center_horizontal"
-                app:layout_constraintTop_toBottomOf="@id/tvAddBudgetTitle"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilMinimumGoal"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:hint="Minimum Goal"
-                    android:textColorHint="@color/hint_color"
-                    app:boxBackgroundColor="@color/white"
-                    app:boxCornerRadiusTopStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusBottomEnd="8dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etMinimumGoal"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:inputType="numberDecimal"
-                        android:textColor="@color/black" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilMaximumGoal"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:hint="Maximum Goal"
-                    android:textColorHint="@color/hint_color"
-                    app:boxBackgroundColor="@color/white"
-                    app:boxCornerRadiusTopStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusBottomEnd="8dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etMaximumGoal"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:inputType="numberDecimal"
-                        android:textColor="@color/black" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/llDates"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:orientation="vertical"
-                app:layout_constraintTop_toBottomOf="@id/llGoals"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilStartDate"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="Start Date"
-                    android:textColorHint="@color/hint_color"
-                    app:boxBackgroundColor="@color/white"
-                    app:boxCornerRadiusBottomEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusTopStart="8dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etStartDate"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:clickable="true"
-                        android:drawableEnd="@drawable/ic_calendar"
-                        android:drawableTint="@color/black"
-                        android:focusable="false"
-                        android:inputType="none"
-                        android:textColor="@color/black" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilEndDate"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="End Date"
-                    android:textColorHint="@color/hint_color"
-                    app:boxBackgroundColor="@color/white"
-                    app:boxCornerRadiusBottomEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusTopStart="8dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etEndDate"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:clickable="true"
-                        android:drawableEnd="@drawable/ic_calendar"
-                        android:drawableTint="@color/black"
-                        android:focusable="false"
-                        android:inputType="none"
-                        android:textColor="@color/black" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/categoryCard"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                app:layout_constraintTop_toBottomOf="@id/llDates"
-                app:layout_constraintStart_toStartOf="parent"
+                android:text="Create Budget Goal"
+                android:textColor="@color/white"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:gravity="start"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@android:color/white">
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/btnBackFromBudget"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintVertical_bias="0" />
 
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:padding="16dp">
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
-                    <TextView
-                        android:id="@+id/tvCategoryLabel"
-                        style="@style/TextAppearance.MaterialComponents.Body1"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Category:"
-                        android:textColor="@color/black"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent" />
+    </com.google.android.material.appbar.AppBarLayout>
 
-                    <Spinner
-                        android:id="@+id/spinnerCategory"
-                        android:layout_width="0dp"
-                        android:layout_height="48dp"
-                        android:gravity="center_vertical"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toEndOf="@id/tvCategoryLabel"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintWidth_percent="0.6" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
-            </com.google.android.material.card.MaterialCardView>
+    <!-- Main Content -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-            <LinearLayout
-                android:id="@+id/llActionButtons"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- Budget Goals Card -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="32dp"
-                app:layout_constraintTop_toBottomOf="@id/categoryCard"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="8dp"
+                app:cardBackgroundColor="@color/card_background">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSaveBudget"
-                    style="@style/Widget.MaterialComponents.Button"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:text="Save Budget"
-                    android:textSize="16sp"
-                    android:textColor="@color/black"
-                    android:background="@drawable/button_background" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnBackFromBudget"
+                    <!-- Card Title -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="20dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_savings"
+                            app:tint="@color/action_card_4"
+                            android:layout_marginEnd="12dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Budget Targets"
+                            android:textColor="@color/text_primary"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Budget Range Inputs -->
+                    <LinearLayout
+                        android:id="@+id/llGoals"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilMinimumGoal"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="8dp"
+                            android:hint="Minimum Goal"
+                            app:boxCornerRadiusTopStart="12dp"
+                            app:boxCornerRadiusTopEnd="12dp"
+                            app:boxCornerRadiusBottomStart="12dp"
+                            app:boxCornerRadiusBottomEnd="12dp"
+                            app:startIconDrawable="@drawable/ic_rand"
+                            app:startIconTint="@color/budget_green">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etMinimumGoal"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="numberDecimal"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilMaximumGoal"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:hint="Maximum Limit"
+                            app:boxCornerRadiusTopStart="12dp"
+                            app:boxCornerRadiusTopEnd="12dp"
+                            app:boxCornerRadiusBottomStart="12dp"
+                            app:boxCornerRadiusBottomEnd="12dp"
+                            app:startIconDrawable="@drawable/ic_rand"
+                            app:startIconTint="@color/expense_red">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etMaximumGoal"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="numberDecimal"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Date Range Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="8dp"
+                app:cardBackgroundColor="@color/card_background">
+
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="16dp"
-                    android:text="Back"
-                    android:textSize="16sp"
-                    android:textColor="@color/black"
-                    android:background="@drawable/button_background"
-                    app:icon="@drawable/ic_back"
-                    app:iconPadding="8dp"
-                    app:iconGravity="textStart"
-                    app:iconTint="@color/black"
-                    style="@style/SecondaryButton" />
-            </LinearLayout>
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </LinearLayout>
-</ScrollView>
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <!-- Card Title -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="20dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_calendar"
+                            app:tint="@color/primary"
+                            android:layout_marginEnd="12dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Budget Period"
+                            android:textColor="@color/text_primary"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Date Inputs -->
+                    <LinearLayout
+                        android:id="@+id/llDates"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilStartDate"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="16dp"
+                            android:hint="Start Date"
+                            app:boxCornerRadiusTopStart="12dp"
+                            app:boxCornerRadiusTopEnd="12dp"
+                            app:boxCornerRadiusBottomStart="12dp"
+                            app:boxCornerRadiusBottomEnd="12dp"
+                            app:startIconDrawable="@drawable/ic_calendar"
+                            app:startIconTint="@color/primary">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etStartDate"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:clickable="true"
+                                android:focusable="false"
+                                android:inputType="none"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilEndDate"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="End Date"
+                            app:boxCornerRadiusTopStart="12dp"
+                            app:boxCornerRadiusTopEnd="12dp"
+                            app:boxCornerRadiusBottomStart="12dp"
+                            app:boxCornerRadiusBottomEnd="12dp"
+                            app:startIconDrawable="@drawable/ic_calendar"
+                            app:startIconTint="@color/primary">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etEndDate"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:clickable="true"
+                                android:focusable="false"
+                                android:inputType="none"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Category Selection Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="8dp"
+                app:cardBackgroundColor="@color/card_background">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <!-- Card Title -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="20dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_category"
+                            app:tint="@color/action_card_3"
+                            android:layout_marginEnd="12dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Select Category"
+                            android:textColor="@color/text_primary"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Category Spinner Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/categoryCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp"
+                        app:cardBackgroundColor="@color/gray_light"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/gray_medium">
+
+                        <androidx.constraintlayout.widget.ConstraintLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:padding="16dp">
+
+                            <TextView
+                                android:id="@+id/tvCategoryLabel"
+                                style="@style/TextAppearance.MaterialComponents.Body1"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Category:"
+                                android:textColor="@color/text_secondary"
+                                android:textStyle="bold"
+                                app:layout_constraintTop_toTopOf="parent"
+                                app:layout_constraintBottom_toBottomOf="parent"
+                                app:layout_constraintStart_toStartOf="parent" />
+
+                            <Spinner
+                                android:id="@+id/spinnerCategory"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginStart="16dp"
+                                android:gravity="center_vertical"
+                                app:layout_constraintTop_toTopOf="parent"
+                                app:layout_constraintBottom_toBottomOf="parent"
+                                app:layout_constraintStart_toEndOf="@id/tvCategoryLabel"
+                                app:layout_constraintEnd_toEndOf="parent" />
+
+                        </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Action Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveBudget"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Create Budget Goal"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/action_card_4"
+                app:cornerRadius="16dp"
+                app:icon="@drawable/ic_savings"
+                app:iconGravity="textStart"
+                app:iconTint="@color/white" />
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

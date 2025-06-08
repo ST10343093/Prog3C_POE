@@ -1,68 +1,125 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="4dp"
-    app:cardBackgroundColor="@android:color/white">
+    android:layout_marginBottom="12dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="6dp"
+    app:cardBackgroundColor="@color/card_background">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:padding="20dp"
+        android:minHeight="68dp">
 
-        android:padding="12dp">
-
-        <View
-            android:id="@+id/viewCategoryColor"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:background="@android:color/holo_blue_light"
-            app:layout_constraintBottom_toBottomOf="parent"
+        <!-- Category Color Indicator -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardColorIndicator"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:strokeWidth="2dp"
+            app:strokeColor="@color/gray_light"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
 
+            <View
+                android:id="@+id/viewCategoryColor"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/holo_blue_light" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Category Name - FIXED VERSION -->
         <TextView
             android:id="@+id/tvCategoryName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:textSize="16sp"
-            android:textColor="@color/black"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/btnEditCategory"
-            app:layout_constraintStart_toEndOf="@+id/viewCategoryColor"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="Category Name" />
+            android:textSize="18sp"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:gravity="center_vertical"
+            app:layout_constraintStart_toEndOf="@id/cardColorIndicator"
+            app:layout_constraintEnd_toStartOf="@id/llActionButtons"
+            app:layout_constraintTop_toTopOf="@id/cardColorIndicator"
+            app:layout_constraintBottom_toBottomOf="@id/cardColorIndicator"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintVertical_bias="0.5"
+            tools:text="Groceries and Household Items" />
 
-        <ImageButton
-            android:id="@+id/btnEditCategory"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Edit Category"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_expense_edit"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/btnDeleteCategory"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <ImageButton
-            android:id="@+id/btnDeleteCategory"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Delete Category"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_delete_category"
-            app:layout_constraintBottom_toBottomOf="parent"
+        <!-- Action Buttons Container -->
+        <LinearLayout
+            android:id="@+id/llActionButtons"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="@id/cardColorIndicator"
+            app:layout_constraintBottom_toBottomOf="@id/cardColorIndicator">
+
+            <!-- Edit Button -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/primary"
+                app:strokeWidth="0dp">
+
+                <ImageButton
+                    android:id="@+id/btnEditCategory"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Edit Category"
+                    android:scaleType="center"
+                    android:src="@drawable/ic_edit"
+                    android:padding="8dp"
+                    app:tint="@color/white" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Delete Button -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/expense_red"
+                app:strokeWidth="0dp">
+
+                <ImageButton
+                    android:id="@+id/btnDeleteCategory"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Delete Category"
+                    android:scaleType="center"
+                    android:src="@drawable/ic_delete"
+                    android:padding="8dp"
+                    app:tint="@color/white" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

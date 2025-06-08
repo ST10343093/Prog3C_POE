@@ -23,6 +23,7 @@ import kotlinx.coroutines.CancellationException
 import vcmsa.projects.prog3c.data.FirestoreRepository
 import vcmsa.projects.prog3c.data.FirestoreCategory
 import vcmsa.projects.prog3c.data.FirestoreExpense
+import vcmsa.projects.prog3c.utils.NavigationHelper
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -31,6 +32,7 @@ import java.util.Locale
 /**
  * Activity for viewing expenses with date range filtering
  * Shows a list of all expenses for the specified period and displays the total amount
+ * Now includes smart navigation integration
  */
 class ExpensesActivity : AppCompatActivity() {
 
@@ -46,7 +48,7 @@ class ExpensesActivity : AppCompatActivity() {
     private lateinit var tvTotalExpenses: TextView
     private lateinit var rvExpenses: RecyclerView
     private lateinit var btnBack: Button
-    private lateinit var fabAddExpense: ExtendedFloatingActionButton  // Added FAB
+    private lateinit var fabAddExpense: ExtendedFloatingActionButton
     private lateinit var adapter: ExpenseAdapter
 
     // Default date range - previous month to current date
@@ -70,7 +72,7 @@ class ExpensesActivity : AppCompatActivity() {
     private var categoryMap: Map<String, FirestoreCategory> = emptyMap()
 
     /**
-     * Initialize the activity, set up UI components and event handlers
+     * Initialize the activity, set up UI components and event handlers with smart navigation
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,7 +91,7 @@ class ExpensesActivity : AppCompatActivity() {
         rvExpenses = findViewById(R.id.rvExpenses)
         btnBack = findViewById(R.id.btnBack)
 
-        // Initialize FAB - This was missing in your code
+        // Initialize FAB
         fabAddExpense = findViewById(R.id.fabAddExpense)
 
         // Initialize clear filter button if it exists in your layout
@@ -115,16 +117,15 @@ class ExpensesActivity : AppCompatActivity() {
             loadExpenses()
         }
 
-        // Set up back button to close activity
+        // Set up back button with smart navigation
         btnBack.setOnClickListener {
-            finish()
+            NavigationHelper.navigateBack(this)
         }
 
-        // **FIX: Set up FAB click listener to add new expense**
+        // Set up FAB click listener to add new expense with smart navigation
         fabAddExpense.setOnClickListener {
             Log.d(TAG, "FAB clicked - navigating to AddExpenseActivity")
-            val intent = Intent(this, AddExpenseActivity::class.java)
-            startActivity(intent)
+            NavigationHelper.navigateToAddExpense(this)
         }
 
         // Set up RecyclerView with custom adapter
@@ -267,7 +268,7 @@ class ExpensesActivity : AppCompatActivity() {
     }
 
     /**
-     * Handles click events on expense items
+     * Handles click events on expense items with smart navigation
      * Opens the ExpenseDetailActivity for the clicked expense
      *
      * @param expense The expense that was clicked
@@ -276,15 +277,8 @@ class ExpensesActivity : AppCompatActivity() {
         try {
             Log.d(TAG, "Expense clicked: ID=${expense.id}, amount=${expense.amount}, description=${expense.description}")
 
-            // Create intent with String ID (not Long)
-            val intent = Intent(this, ExpenseDetailActivity::class.java)
-            intent.putExtra("EXPENSE_ID", expense.id) // This is now a String, not Long
-
-            // Add flags to ensure proper navigation
-            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-
-            Log.d(TAG, "Starting ExpenseDetailActivity with expense ID: ${expense.id}")
-            startActivity(intent)
+            // Use smart navigation to go to expense detail
+            NavigationHelper.navigateToExpenseDetail(this, expense.id)
         } catch (e: Exception) {
             Log.e(TAG, "Error opening expense details", e)
             Toast.makeText(this, "Error opening expense details: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -301,6 +295,13 @@ class ExpensesActivity : AppCompatActivity() {
         if (::firestoreRepository.isInitialized) {
             loadExpenses()
         }
+    }
+
+    /**
+     * Handle back button press with smart navigation
+     */
+    override fun onBackPressed() {
+        NavigationHelper.navigateBack(this)
     }
 
     /**

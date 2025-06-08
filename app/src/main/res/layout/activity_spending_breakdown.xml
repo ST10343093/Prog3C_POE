@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_primary"
-    tools:context=".CategoriesMonthlySpendingActivity">
+    tools:context=".SpendingBreakdownActivity">
 
     <!-- Modern App Bar with Gradient Background -->
     <com.google.android.material.appbar.AppBarLayout
@@ -22,7 +22,7 @@
 
             <!-- Back Button -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnBack"
+                android:id="@+id/btnBackFromBreakdown"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
@@ -40,20 +40,32 @@
 
             <!-- Title -->
             <TextView
-                android:id="@+id/tvCategoryTitle"
+                android:id="@+id/tvBreakdownTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="Spending Analytics"
+                android:text="Spending Breakdown"
                 android:textColor="@color/white"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:gravity="start"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/btnBack"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintVertical_bias="0" />
+                app:layout_constraintTop_toBottomOf="@id/btnBackFromBreakdown" />
+
+            <!-- Subtitle -->
+            <TextView
+                android:id="@+id/tvDateRange"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Current Month"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:alpha="0.9"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvBreakdownTitle" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -82,153 +94,163 @@
                 app:cardBackgroundColor="@color/card_background">
 
                 <LinearLayout
-                    android:id="@+id/dateFilterContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="24dp">
+                    android:padding="20dp">
 
-                    <!-- Card Title -->
+                    <!-- Filter Title -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginBottom="20dp">
+                        android:layout_marginBottom="16dp">
 
                         <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_calendar"
-                            app:tint="@color/action_card_6"
-                            android:layout_marginEnd="12dp" />
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_filter"
+                            app:tint="@color/primary"
+                            android:layout_marginEnd="8dp" />
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Filter by Date Range"
+                            android:text="Filter by Date"
                             android:textColor="@color/text_primary"
-                            android:textSize="18sp"
+                            android:textSize="16sp"
                             android:textStyle="bold" />
+
+                        <!-- Clear Filter Button -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnClearFilter"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Clear"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:minWidth="0dp"
+                            android:paddingHorizontal="8dp" />
 
                     </LinearLayout>
 
-                    <!-- Start Date Input -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/tilStartDate"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:hint="Start Date"
-                        app:boxCornerRadiusTopStart="12dp"
-                        app:boxCornerRadiusTopEnd="12dp"
-                        app:boxCornerRadiusBottomStart="12dp"
-                        app:boxCornerRadiusBottomEnd="12dp"
-                        app:startIconDrawable="@drawable/ic_calendar"
-                        app:startIconTint="@color/primary">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etStartDate"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:clickable="true"
-                            android:focusable="false"
-                            android:inputType="none"
-                            android:textColor="@color/text_primary"
-                            android:textSize="16sp" />
-
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- End Date and Clear Button Row -->
+                    <!-- Date Inputs -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="20dp">
+                        android:layout_marginBottom="16dp">
 
+                        <!-- Start Date -->
                         <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/tilEndDate"
                             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:layout_marginEnd="12dp"
+                            android:layout_marginEnd="8dp"
+                            android:hint="Start Date"
+                            app:boxCornerRadiusTopStart="8dp"
+                            app:boxCornerRadiusTopEnd="8dp"
+                            app:boxCornerRadiusBottomStart="8dp"
+                            app:boxCornerRadiusBottomEnd="8dp">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etStartDate"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:focusable="false"
+                                android:inputType="none"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp" />
+
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <!-- End Date -->
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
                             android:hint="End Date"
-                            app:boxCornerRadiusTopStart="12dp"
-                            app:boxCornerRadiusTopEnd="12dp"
-                            app:boxCornerRadiusBottomStart="12dp"
-                            app:boxCornerRadiusBottomEnd="12dp"
-                            app:startIconDrawable="@drawable/ic_calendar"
-                            app:startIconTint="@color/primary">
+                            app:boxCornerRadiusTopStart="8dp"
+                            app:boxCornerRadiusTopEnd="8dp"
+                            app:boxCornerRadiusBottomStart="8dp"
+                            app:boxCornerRadiusBottomEnd="8dp">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etEndDate"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:clickable="true"
                                 android:focusable="false"
                                 android:inputType="none"
                                 android:textColor="@color/text_primary"
-                                android:textSize="16sp" />
+                                android:textSize="14sp" />
 
                         </com.google.android.material.textfield.TextInputLayout>
-
-                        <!-- Clear Button -->
-                        <com.google.android.material.card.MaterialCardView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:cardCornerRadius="12dp"
-                            app:cardElevation="2dp"
-                            app:cardBackgroundColor="@color/gray_light"
-                            app:strokeWidth="1dp"
-                            app:strokeColor="@color/gray_medium">
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/buttonClear"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                android:insetLeft="0dp"
-                                android:insetRight="0dp"
-                                android:text=""
-                                android:contentDescription="Clear Filters"
-                                app:backgroundTint="@android:color/transparent"
-                                app:icon="@drawable/ic_clear_filter"
-                                app:iconGravity="textStart"
-                                app:iconPadding="0dp"
-                                app:iconSize="20dp"
-                                app:iconTint="@color/text_secondary" />
-
-                        </com.google.android.material.card.MaterialCardView>
 
                     </LinearLayout>
 
                     <!-- Apply Filter Button -->
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/buttonApplyFilter"
+                        android:id="@+id/btnApplyFilter"
                         android:layout_width="match_parent"
-                        android:layout_height="56dp"
+                        android:layout_height="48dp"
                         android:text="Apply Filter"
                         android:textColor="@color/white"
-                        android:textSize="16sp"
+                        android:textSize="14sp"
                         android:textStyle="bold"
-                        app:backgroundTint="@color/action_card_6"
-                        app:cornerRadius="12dp"
-                        app:icon="@drawable/ic_analytics"
-                        app:iconGravity="textStart"
-                        app:iconTint="@color/white" />
+                        app:backgroundTint="@color/primary"
+                        app:cornerRadius="8dp" />
 
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- NEW: Chart Display Card -->
+            <!-- Total Amount Card -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/chartCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="8dp"
+                app:cardBackgroundColor="@color/action_card_1">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Total Spending"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:alpha="0.9" />
+
+                    <TextView
+                        android:id="@+id/tvTotalAmount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="R0.00"
+                        android:textColor="@color/white"
+                        android:textSize="32sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Pie Chart Card with Custom Legend -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardChart"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
@@ -253,128 +275,62 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_analytics"
-                            app:tint="@color/primary"
+                            android:src="@drawable/ic_pie_chart"
+                            app:tint="@color/action_card_6"
                             android:layout_marginEnd="12dp" />
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Spending vs Budget Goals"
+                            android:text="Visual Breakdown"
                             android:textColor="@color/text_primary"
                             android:textSize="18sp"
                             android:textStyle="bold" />
 
-                        <!-- Chart Toggle Button -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnToggleView"
-                            style="@style/Widget.MaterialComponents.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Chart"
-                            android:textColor="@color/primary"
-                            android:textSize="12sp"
-                            android:minWidth="0dp"
-                            android:paddingHorizontal="8dp"
-                            app:icon="@drawable/ic_analytics"
-                            app:iconSize="16dp"
-                            app:iconTint="@color/primary" />
-
                     </LinearLayout>
 
-                    <!-- Chart Container -->
+                    <!-- Pie Chart Container -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
-                        android:layout_height="350dp"
+                        android:layout_height="300dp"
+                        android:layout_marginBottom="20dp"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="4dp"
                         app:cardBackgroundColor="@android:color/white">
 
-                        <!-- Actual Chart View -->
-                        <com.github.mikephil.charting.charts.BarChart
-                            android:id="@+id/spendingChart"
+                        <com.github.mikephil.charting.charts.PieChart
+                            android:id="@+id/pieChart"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:layout_margin="8dp" />
 
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Chart Legend -->
+                    <!-- Custom Legend Section -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center"
-                        android:layout_marginTop="16dp">
+                        android:orientation="vertical">
 
-                        <!-- Spending Legend -->
-                        <LinearLayout
+                        <!-- Legend Title -->
+                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:layout_marginEnd="16dp">
+                            android:text="Categories"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="12dp" />
 
-                            <View
-                                android:layout_width="16dp"
-                                android:layout_height="16dp"
-                                android:background="@color/action_card_6"
-                                android:layout_marginEnd="6dp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Spending"
-                                android:textColor="@color/text_primary"
-                                android:textSize="12sp" />
-
-                        </LinearLayout>
-
-                        <!-- Min Goal Legend -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
+                        <!-- Custom Legend RecyclerView -->
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rvCustomLegend"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:layout_marginEnd="16dp">
-
-                            <View
-                                android:layout_width="16dp"
-                                android:layout_height="2dp"
-                                android:background="@color/budget_green"
-                                android:layout_marginEnd="6dp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Min Goal"
-                                android:textColor="@color/text_primary"
-                                android:textSize="12sp" />
-
-                        </LinearLayout>
-
-                        <!-- Max Goal Legend -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <View
-                                android:layout_width="16dp"
-                                android:layout_height="2dp"
-                                android:background="@color/expense_red"
-                                android:layout_marginEnd="6dp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Max Goal"
-                                android:textColor="@color/text_primary"
-                                android:textSize="12sp" />
-
-                        </LinearLayout>
+                            android:nestedScrollingEnabled="false"
+                            android:clipToPadding="false"
+                            tools:listitem="@layout/item_legend" />
 
                     </LinearLayout>
 
@@ -382,8 +338,9 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Results Card (existing table view) -->
+            <!-- Detailed Breakdown Card -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardBreakdown"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
@@ -396,7 +353,7 @@
                     android:orientation="vertical"
                     android:padding="24dp">
 
-                    <!-- Card Title -->
+                    <!-- Breakdown Title -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -415,21 +372,21 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Category Breakdown"
+                            android:text="Detailed Breakdown"
                             android:textColor="@color/text_primary"
                             android:textSize="18sp"
                             android:textStyle="bold" />
 
                     </LinearLayout>
 
-                    <!-- Categories RecyclerView -->
+                    <!-- Breakdown List -->
                     <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rvExpenses"
+                        android:id="@+id/rvCategoryBreakdown"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:nestedScrollingEnabled="false"
                         android:clipToPadding="false"
-                        tools:listitem="@layout/item_categroty_expense" />
+                        tools:listitem="@layout/item_category_breakdown" />
 
                     <!-- Empty State -->
                     <LinearLayout
@@ -443,7 +400,7 @@
                         <ImageView
                             android:layout_width="48dp"
                             android:layout_height="48dp"
-                            android:src="@drawable/ic_analytics"
+                            android:src="@drawable/ic_pie_chart"
                             app:tint="@color/text_light"
                             android:layout_marginBottom="12dp" />
 
@@ -459,7 +416,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Try adjusting your date range"
+                            android:text="Add some expenses to see your breakdown"
                             android:textColor="@color/text_light"
                             android:textSize="14sp"
                             android:gravity="center" />

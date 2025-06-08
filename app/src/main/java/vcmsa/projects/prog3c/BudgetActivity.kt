@@ -86,6 +86,26 @@ class BudgetActivity : AppCompatActivity() {
         btnSaveBudget = findViewById(R.id.btnSaveBudget)
         btnBackFromBudget = findViewById(R.id.btnBackFromBudget)
 
+        // FIXED: Set better default dates
+        val calendar = Calendar.getInstance()
+
+        // Start date: Today at beginning of day
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        startDate = calendar.time
+
+        // End date: End of current month
+        calendar.add(Calendar.MONTH, 1)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.add(Calendar.DAY_OF_MONTH, -1) // Last day of current month
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        endDate = calendar.time
+
         // Set up date picker
         setupDatePicker()
 
@@ -121,7 +141,25 @@ class BudgetActivity : AppCompatActivity() {
                     calendar.set(Calendar.YEAR, year)
                     calendar.set(Calendar.MONTH, month)
                     calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                    // FIXED: Set start date to beginning of day
+                    calendar.set(Calendar.HOUR_OF_DAY, 0)
+                    calendar.set(Calendar.MINUTE, 0)
+                    calendar.set(Calendar.SECOND, 0)
+                    calendar.set(Calendar.MILLISECOND, 0)
                     startDate = calendar.time
+
+                    // FIXED: Auto-set end date to end of selected month if not set properly
+                    if (endDate.before(startDate) || endDate == startDate) {
+                        val endCalendar = Calendar.getInstance()
+                        endCalendar.time = startDate
+                        endCalendar.add(Calendar.MONTH, 1) // Default to 1 month later
+                        endCalendar.set(Calendar.HOUR_OF_DAY, 23)
+                        endCalendar.set(Calendar.MINUTE, 59)
+                        endCalendar.set(Calendar.SECOND, 59)
+                        endCalendar.set(Calendar.MILLISECOND, 999)
+                        endDate = endCalendar.time
+                    }
+
                     updateDateText()
                 },
                 calendar.get(Calendar.YEAR),
@@ -141,6 +179,11 @@ class BudgetActivity : AppCompatActivity() {
                     calendar.set(Calendar.YEAR, year)
                     calendar.set(Calendar.MONTH, month)
                     calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                    // FIXED: Set end date to end of day
+                    calendar.set(Calendar.HOUR_OF_DAY, 23)
+                    calendar.set(Calendar.MINUTE, 59)
+                    calendar.set(Calendar.SECOND, 59)
+                    calendar.set(Calendar.MILLISECOND, 999)
                     endDate = calendar.time
                     updateDateText()
                 },
@@ -148,6 +191,8 @@ class BudgetActivity : AppCompatActivity() {
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH)
             )
+            // FIXED: Set minimum date to start date + 1 day
+            datePickerDialog.datePicker.minDate = startDate.time + (24 * 60 * 60 * 1000) // Next day
             datePickerDialog.show()
         }
     }
@@ -274,8 +319,16 @@ class BudgetActivity : AppCompatActivity() {
             return
         }
 
+        // FIXED: Better date validation
         if (endDate.before(startDate)) {
             Toast.makeText(this, "End date must be after start date", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // FIXED: Check if dates are too close (same day)
+        val daysDifference = (endDate.time - startDate.time) / (24 * 60 * 60 * 1000)
+        if (daysDifference < 1) {
+            Toast.makeText(this, "Budget period must be at least 1 day long", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -294,7 +347,7 @@ class BudgetActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 firestoreRepository.insertBudget(budget)
-                Toast.makeText(this@BudgetActivity, "Budget saved", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@BudgetActivity, "Budget saved successfully", Toast.LENGTH_SHORT).show()
                 finish()
             } catch (e: Exception) {
                 Toast.makeText(this@BudgetActivity, "Error saving budget: ${e.message}", Toast.LENGTH_SHORT).show()

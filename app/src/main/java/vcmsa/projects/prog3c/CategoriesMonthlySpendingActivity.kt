@@ -1,6 +1,7 @@
 package vcmsa.projects.prog3c
 
 import android.app.DatePickerDialog
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -20,14 +21,28 @@ import androidx.lifecycle.lifecycleScope
 import vcmsa.projects.prog3c.data.FirestoreRepository
 import vcmsa.projects.prog3c.data.FirestoreExpense
 import vcmsa.projects.prog3c.data.FirestoreCategory
+import vcmsa.projects.prog3c.data.FirestoreBudget
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+// Chart imports
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.components.YAxis
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
+import com.github.mikephil.charting.components.LimitLine
+import com.github.mikephil.charting.components.Description
+
 /**
  * Activity for displaying monthly spending summaries categorized by expense categories.
- * Allows users to filter spending by date range and view total spending per category.
+ * Now includes interactive charts showing spending vs budget goals.
+ * Allows users to filter spending by date range and view both chart and table data.
  */
 class CategoriesMonthlySpendingActivity : AppCompatActivity() {
 
@@ -45,10 +60,19 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
     private lateinit var btnBackFromCategories: Button
     private lateinit var btnClearFilter: Button
     private lateinit var btnApplyFilter: Button
+    private lateinit var btnToggleView: Button
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: CategorySummaryAdapter
     private lateinit var etStartDate: TextInputEditText
     private lateinit var etEndDate: TextInputEditText
+
+    // NEW: Chart components
+    private lateinit var spendingChart: BarChart
+    private lateinit var chartCard: View
+
+    // Data storage for chart
+    private var currentCategories: List<CategorySummaryAdapter.CategorySummary> = emptyList()
+    private var currentBudgets: List<FirestoreBudget> = emptyList()
 
     /**
      * Initializes the activity, sets up UI components and event listeners
@@ -69,6 +93,11 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
         btnBackFromCategories = findViewById(R.id.btnBack)
         btnClearFilter = findViewById(R.id.buttonClear)
         btnApplyFilter = findViewById(R.id.buttonApplyFilter)
+        btnToggleView = findViewById(R.id.btnToggleView)
+
+        // NEW: Initialize chart components
+        spendingChart = findViewById(R.id.spendingChart)
+        chartCard = findViewById(R.id.chartCard)
 
         // Set up RecyclerView with adapter
         recyclerView = findViewById(R.id.rvExpenses)
@@ -82,6 +111,9 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
         // Set default dates (last 30 days)
         setDefaultDates()
         updateDateText()
+
+        // NEW: Setup chart
+        setupChart()
 
         // Load initial data (all categories)
         loadCategories()
@@ -97,7 +129,189 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
             finish()
         }
 
+        // NEW: Toggle between chart and table view
+        btnToggleView.setOnClickListener {
+            toggleChartVisibility()
+        }
+
         Log.d(TAG, "onCreate completed")
+    }
+
+    /**
+     * NEW: Setup and configure the chart appearance
+     */
+    private fun setupChart() {
+        Log.d(TAG, "Setting up chart")
+
+        // Chart general settings
+        spendingChart.setDrawBarShadow(false)
+        spendingChart.setDrawValueAboveBar(true)
+        spendingChart.setPinchZoom(false)
+        spendingChart.setDrawGridBackground(false)
+        spendingChart.isHighlightPerTapEnabled = true
+        spendingChart.setScaleEnabled(false)
+
+        // FIXED: Add extra padding for labels
+        spendingChart.setExtraOffsets(10f, 20f, 10f, 80f) // left, top, right, bottom
+
+        // Remove description label
+        val description = Description()
+        description.text = ""
+        spendingChart.description = description
+
+        // FIXED: Configure X-axis (category names) with better spacing
+        val xAxis = spendingChart.xAxis
+        xAxis.position = XAxis.XAxisPosition.BOTTOM
+        xAxis.setDrawGridLines(false)
+        xAxis.granularity = 1f
+        xAxis.labelRotationAngle = -45f  // Rotate for better readability
+        xAxis.textSize = 11f             // Slightly larger text
+        xAxis.textColor = Color.BLACK
+        xAxis.setLabelCount(10, false)   // Limit number of labels if too many
+        xAxis.isGranularityEnabled = true
+        xAxis.setAvoidFirstLastClipping(true) // Prevent clipping of first/last labels
+        xAxis.spaceMin = 0.5f            // Add space at beginning
+        xAxis.spaceMax = 0.5f            // Add space at end
+
+        // Configure Y-axis (amounts)
+        val leftAxis = spendingChart.axisLeft
+        leftAxis.setLabelCount(8, false)
+        leftAxis.setPosition(YAxis.YAxisLabelPosition.OUTSIDE_CHART)
+        leftAxis.spaceTop = 15f
+        leftAxis.axisMinimum = 0f
+        leftAxis.textColor = Color.BLACK
+        leftAxis.textSize = 10f
+
+        // Disable right axis
+        val rightAxis = spendingChart.axisRight
+        rightAxis.isEnabled = false
+
+        // Configure legend
+        val legend = spendingChart.legend
+        legend.isEnabled = false // We have our own custom legend
+
+        Log.d(TAG, "Chart setup completed")
+    }
+
+    /**
+     * NEW: Toggle chart visibility and update button text
+     */
+    private fun toggleChartVisibility() {
+        if (chartCard.visibility == View.VISIBLE) {
+            chartCard.visibility = View.GONE
+            btnToggleView.text = "Show Chart"
+        } else {
+            chartCard.visibility = View.VISIBLE
+            btnToggleView.text = "Hide Chart"
+            // Refresh chart when showing
+            updateChart()
+        }
+    }
+
+    /**
+     * NEW: Update chart with current data
+     */
+    private fun updateChart() {
+        Log.d(TAG, "Updating chart with ${currentCategories.size} categories")
+
+        if (currentCategories.isEmpty()) {
+            spendingChart.clear()
+            spendingChart.invalidate()
+            return
+        }
+
+        // Prepare data for chart
+        val entries = mutableListOf<BarEntry>()
+        val labels = mutableListOf<String>()
+
+        currentCategories.forEachIndexed { index, category ->
+            entries.add(BarEntry(index.toFloat(), category.totalSpent.toFloat()))
+
+            // FIXED: Shorten category names if they're too long
+            val shortName = if (category.name.length > 8) {
+                category.name.substring(0, 8) + "..."
+            } else {
+                category.name
+            }
+            labels.add(shortName)
+
+            Log.d(TAG, "Chart entry: ${category.name} -> $shortName = R${category.totalSpent}")
+        }
+
+        // Create dataset
+        val dataSet = BarDataSet(entries, "Spending")
+        dataSet.color = Color.parseColor("#2196F3") // Blue color for spending bars
+        dataSet.valueTextColor = Color.BLACK
+        dataSet.valueTextSize = 10f
+
+        // Format values to show currency
+        dataSet.setValueFormatter(object : com.github.mikephil.charting.formatter.ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                return "R${String.format("%.0f", value)}"
+            }
+        })
+
+        // Create bar data
+        val barData = BarData(dataSet)
+        barData.barWidth = 0.7f // Make bars slightly thinner for more spacing
+
+        // Set data to chart
+        spendingChart.data = barData
+
+        // FIXED: Set custom labels for X-axis with shortened names
+        spendingChart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
+        spendingChart.xAxis.labelCount = labels.size
+
+        // Add budget goal lines if we have budget data
+        addBudgetGoalLines()
+
+        // Refresh chart
+        spendingChart.animateY(800) // Animate for 800ms
+        spendingChart.invalidate()
+
+        Log.d(TAG, "Chart update completed")
+    }
+
+    /**
+     * NEW: Add budget goal lines to the chart
+     */
+    private fun addBudgetGoalLines() {
+        Log.d(TAG, "Adding budget goal lines, budgets available: ${currentBudgets.size}")
+
+        val leftAxis = spendingChart.axisLeft
+
+        // Clear existing limit lines
+        leftAxis.removeAllLimitLines()
+
+        if (currentBudgets.isEmpty()) {
+            Log.d(TAG, "No budgets to display")
+            return
+        }
+
+        // Calculate average budget goals across all categories for display
+        val avgMinGoal = currentBudgets.map { it.minimumAmount }.average()
+        val avgMaxGoal = currentBudgets.map { it.maximumAmount }.average()
+
+        // Add minimum goal line (green)
+        val minLine = LimitLine(avgMinGoal.toFloat(), "Avg Min Goal")
+        minLine.lineWidth = 2f
+        minLine.lineColor = Color.parseColor("#4CAF50") // Green
+        minLine.labelPosition = LimitLine.LimitLabelPosition.RIGHT_TOP
+        minLine.textSize = 10f
+        minLine.textColor = Color.parseColor("#4CAF50")
+
+        // Add maximum goal line (red)
+        val maxLine = LimitLine(avgMaxGoal.toFloat(), "Avg Max Goal")
+        maxLine.lineWidth = 2f
+        maxLine.lineColor = Color.parseColor("#F44336") // Red
+        maxLine.labelPosition = LimitLine.LimitLabelPosition.RIGHT_BOTTOM
+        maxLine.textSize = 10f
+        maxLine.textColor = Color.parseColor("#F44336")
+
+        leftAxis.addLimitLine(minLine)
+        leftAxis.addLimitLine(maxLine)
+
+        Log.d(TAG, "Added budget lines - Min: R$avgMinGoal, Max: R$avgMaxGoal")
     }
 
     /**
@@ -185,17 +399,22 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
     /**
      * Loads all categories and their associated expenses
      * Calculates the total spent in each category and displays the summaries
+     * UPDATED: Now also loads budget data for chart
      */
     private fun loadCategories() {
         Log.d(TAG, "Loading all categories (no date filter)")
         lifecycleScope.launch {
             try {
-                // Combine expenses and categories data flows from Firestore
+                // Combine expenses, categories, and budgets data flows from Firestore
                 combine(
                     firestoreRepository.getAllExpenses(),
-                    firestoreRepository.getAllCategories()
-                ) { expenses, categories ->
-                    Log.d(TAG, "Received ${expenses.size} expenses and ${categories.size} categories")
+                    firestoreRepository.getAllCategories(),
+                    firestoreRepository.getAllBudgets()
+                ) { expenses, categories, budgets ->
+                    Log.d(TAG, "Received ${expenses.size} expenses, ${categories.size} categories, ${budgets.size} budgets")
+
+                    // Store budgets for chart
+                    currentBudgets = budgets
 
                     // Create a map of category ID to Category object
                     val categoryMap = categories.associateBy { it.id }
@@ -220,8 +439,17 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
                     summaries
                 }.collect { summaries ->
                     Log.d(TAG, "Updating adapter with ${summaries.size} summaries")
+
+                    // Store current data for chart
+                    currentCategories = summaries
+
                     // Update the RecyclerView with the new data
                     adapter.submitList(summaries)
+
+                    // Update chart if visible
+                    if (chartCard.visibility == View.VISIBLE) {
+                        updateChart()
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading categories", e)
@@ -233,6 +461,7 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
     /**
      * Filters expenses by the selected date range
      * Only includes expenses with dates between startDate and endDate
+     * UPDATED: Now also filters budget data for the same period
      */
     private fun filterCategories() {
         val start = startDate
@@ -249,9 +478,18 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
             try {
                 combine(
                     firestoreRepository.getExpensesByDateRange(start, end),
-                    firestoreRepository.getAllCategories()
-                ) { expenses, categories ->
-                    Log.d(TAG, "Filtered ${expenses.size} expenses and ${categories.size} categories")
+                    firestoreRepository.getAllCategories(),
+                    firestoreRepository.getAllBudgets()
+                ) { expenses, categories, budgets ->
+                    Log.d(TAG, "Filtered ${expenses.size} expenses, ${categories.size} categories, ${budgets.size} budgets")
+
+                    // Filter budgets that are active during the selected period
+                    currentBudgets = budgets.filter { budget ->
+                        val budgetStart = budget.getStartDate()
+                        val budgetEnd = budget.getEndDate()
+                        // Budget overlaps with selected period
+                        (budgetStart <= end && budgetEnd >= start)
+                    }
 
                     val categoryMap = categories.associateBy { it.id }
 
@@ -275,7 +513,16 @@ class CategoriesMonthlySpendingActivity : AppCompatActivity() {
                     summaries
                 }.collect { summaries ->
                     Log.d(TAG, "Updating adapter with ${summaries.size} filtered summaries")
+
+                    // Store current data for chart
+                    currentCategories = summaries
+
                     adapter.submitList(summaries)
+
+                    // Update chart if visible
+                    if (chartCard.visibility == View.VISIBLE) {
+                        updateChart()
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error filtering categories", e)

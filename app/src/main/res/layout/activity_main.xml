@@ -90,6 +90,8 @@
                 android:textColor="@color/white"
                 android:textSize="24sp"
                 android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
                 app:layout_constraintEnd_toStartOf="@id/btnLogout"
                 app:layout_constraintStart_toEndOf="@id/ivProfilePicture"
                 app:layout_constraintTop_toBottomOf="@id/tvWelcomeGreeting" />
@@ -102,6 +104,7 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginBottom="80dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -499,10 +502,144 @@
 
                 </LinearLayout>
 
+                <!-- NEW: Row 4 - SmartSaver Features -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SmartSaver Features"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="24dp">
+
+                    <!-- In My Pocket Card - NEW FEATURE -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardInMyPocket"
+                        android:layout_width="0dp"
+                        android:layout_height="120dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackground"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="6dp"
+                        app:cardBackgroundColor="#FF6B35">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="16dp"
+                            android:gravity="center">
+
+                            <ImageView
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:src="@drawable/ic_wallet"
+                                app:tint="@color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="In My Pocket"
+                                android:textColor="@color/white"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:gravity="center" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Available Money"
+                                android:textColor="@color/white"
+                                android:textSize="10sp"
+                                android:alpha="0.8"
+                                android:gravity="center" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Spending Breakdown Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardSpendingBreakdown"
+                        android:layout_width="0dp"
+                        android:layout_height="120dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackground"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="6dp"
+                        app:cardBackgroundColor="#8E24AA">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="16dp"
+                            android:gravity="center">
+
+                            <ImageView
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:src="@drawable/ic_pie_chart"
+                                app:tint="@color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="Spending Breakdown"
+                                android:textColor="@color/white"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:gravity="center" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Visual Charts"
+                                android:textColor="@color/white"
+                                android:textSize="10sp"
+                                android:alpha="0.8"
+                                android:gravity="center" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+
             </LinearLayout>
 
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
+
+    <!-- Bottom Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigationView"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_gravity="bottom"
+        android:background="@color/card_background"
+        app:elevation="8dp"
+        app:itemIconTint="@drawable/bottom_nav_selector"
+        app:itemTextColor="@drawable/bottom_nav_selector"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/bottom_navigation_menu" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.launch
 import vcmsa.projects.prog3c.data.FirestoreRepository
 import vcmsa.projects.prog3c.data.FirestoreCategory
@@ -36,6 +37,7 @@ class ExpenseDetailActivity : AppCompatActivity() {
     private lateinit var tvExpenseDescription: TextView
     private lateinit var tvExpenseCategory: TextView
     private lateinit var ivExpensePhoto: ImageView
+    private lateinit var photoCard: MaterialCardView
     private lateinit var btnEditExpense: Button
     private lateinit var btnDeleteExpense: Button
     private lateinit var btnBack: Button
@@ -60,6 +62,7 @@ class ExpenseDetailActivity : AppCompatActivity() {
         tvExpenseDescription = findViewById(R.id.tvDetailDescription)
         tvExpenseCategory = findViewById(R.id.tvDetailCategory)
         ivExpensePhoto = findViewById(R.id.ivDetailPhoto)
+        photoCard = findViewById(R.id.photoCard)
         btnEditExpense = findViewById(R.id.btnEditExpense)
         btnDeleteExpense = findViewById(R.id.btnDeleteExpense)
         btnBack = findViewById(R.id.btnBackFromDetail)
@@ -178,6 +181,9 @@ class ExpenseDetailActivity : AppCompatActivity() {
                     // Log for debugging
                     Log.d(TAG, "Photo path: ${expense.photoPath}")
 
+                    // Show the photo card
+                    photoCard.visibility = View.VISIBLE
+
                     if (expense.photoPath!!.startsWith("content://")) {
                         // Handle content URI (photos selected from gallery) - with better error handling
                         try {
@@ -199,12 +205,10 @@ class ExpenseDetailActivity : AppCompatActivity() {
                             try {
                                 val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri)
                                 ivExpensePhoto.setImageBitmap(bitmap)
-                                ivExpensePhoto.visibility = View.VISIBLE
                                 Log.d(TAG, "Loaded image from content URI using MediaStore")
                             } catch (e: Exception) {
                                 // Fallback to setImageURI
                                 ivExpensePhoto.setImageURI(uri)
-                                ivExpensePhoto.visibility = View.VISIBLE
                                 Log.d(TAG, "Loaded image from content URI using setImageURI")
                             }
                         } catch (securityException: SecurityException) {
@@ -221,7 +225,6 @@ class ExpenseDetailActivity : AppCompatActivity() {
                             val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
                             if (bitmap != null) {
                                 ivExpensePhoto.setImageBitmap(bitmap)
-                                ivExpensePhoto.visibility = View.VISIBLE
                                 Log.d(TAG, "Loaded image from file path")
                             } else {
                                 Log.e(TAG, "Failed to decode bitmap from file")
@@ -238,7 +241,8 @@ class ExpenseDetailActivity : AppCompatActivity() {
                 }
             } else {
                 Log.d(TAG, "No photo path available")
-                ivExpensePhoto.visibility = View.GONE
+                // Hide the entire photo card when no photo
+                photoCard.visibility = View.GONE
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error displaying expense details", e)
@@ -248,12 +252,12 @@ class ExpenseDetailActivity : AppCompatActivity() {
 
     /**
      * Shows a user-friendly error message when image loading fails
-     * Hides the image view and shows a toast message
+     * Hides the photo card and shows a toast message
      *
      * @param message The error message to display
      */
     private fun showImageError(message: String) {
-        ivExpensePhoto.visibility = View.GONE
+        photoCard.visibility = View.GONE
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         Log.d(TAG, "Image error: $message")
 
