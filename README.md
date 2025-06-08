@@ -4,7 +4,7 @@
   <p><i>Take control of your finances with intelligent expense tracking and budgeting</i></p>
   
   <p>
-    <a href="https://youtu.be/-IYkghf4UpE"><img src="https://img.shields.io/badge/Watch_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube Demo"></a>
+    <a href="https://youtu.be/zgN5bFhBC9w"><img src="https://img.shields.io/badge/Watch_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube Demo"></a>
     <a href="https://github.com/ST10343093/Prog3C_POE"><img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Repo"></a>
     <a href="https://play.google.com"><img src="https://img.shields.io/badge/Google_Play-414141?style=for-the-badge&logo=google-play&logoColor=white" alt="Google Play"></a>
     <img src="https://img.shields.io/badge/Version-2.0.0-blue?style=for-the-badge" alt="Version 2.0.0">
@@ -198,7 +198,7 @@
       </td>
     </tr>
   </table>
-  <p><a href="https://youtu.be/-IYkghf4UpE">▶️ Watch our comprehensive video demonstration</a> to see all features in action!</p>
+  <p><a href="https://youtu.be/zgN5bFhBC9w">▶️ Watch our comprehensive video demonstration</a> to see all features in action!</p>
 </div>
 
 <div align="center">
